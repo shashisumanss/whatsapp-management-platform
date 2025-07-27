@@ -1,0 +1,7 @@
+Collecting plotly
+  Downloading https://files.pythonhosted.org/packages/ed/20/f2b7ac96a91cc5f70d81320adad24cc41bf52013508d649b1481db225780/plotly-6.2.0-py3-none-any.whl (9.6MB)
+Requirement already satisfied: packaging in ./multilingual_whatsapp_env/lib/python3.8/site-packages (from plotly) (25.0)
+Collecting narwhals>=1.15.1 (from plotly)
+  Downloading https://files.pythonhosted.org/packages/79/3f/8d450588206b437dd239a6d44230c63095e71135bd95d5a74347d07adbd5/narwhals-1.42.1-py3-none-any.whl (359kB)
+Installing collected packages: narwhals, plotly
+Successfully installed narwhals-1.42.1 plotly-6.2.0

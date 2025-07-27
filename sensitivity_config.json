@@ -1,0 +1,12 @@
+{
+  "ml_confidence_threshold": 0.9,
+  "keyword_sensitivity": "low",
+  "bert_threshold": 0.8,
+  "auto_escalation": false,
+  "language_boost": false,
+  "enabled_detectors": {
+    "keywords": true,
+    "ml_models": true,
+    "bert_toxicity": true
+  }
+}

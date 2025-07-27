@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+
+# Virtual environments (IMPORTANT!)
+multilingual_whatsapp_env/
+whatsapp_env/
+*/lib/
+*/include/
+*/bin/
+*/Scripts/
+pyvenv.cfg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application specific
+uploads/
+static/reports/
+static/charts/
+*.log
+*.db
+*.sqlite
+
+# Dependencies
+node_modules/
+pip-log.txt
+
+# Temporary files
+*.tmp
+*.temp
+
+# Large ML models
+*.bin
+*.model
+*.h5
+*.pkl

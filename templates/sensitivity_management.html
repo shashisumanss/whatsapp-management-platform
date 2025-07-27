@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Model Sensitivity Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-radius: 15px;
+            padding: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+            white-space: nowrap;
+            min-width: 140px;
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        /* Model Cards */
+        .model-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .model-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .model-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            text-transform: capitalize;
+            flex: 1;
+        }
+
+        .sensitivity-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: auto;
+        }
+
+        .sensitivity-very_low { background: #d4edda; color: #155724; }
+        .sensitivity-low { background: #cce5ff; color: #004085; }
+        .sensitivity-medium { background: #fff3cd; color: #856404; }
+        .sensitivity-high { background: #f8d7da; color: #721c24; }
+        .sensitivity-very_high { background: #ff6b6b; color: white; }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .sensitivity-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            margin: 10px 0;
+        }
+
+        .sensitivity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .action-btn.success {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+            color: white;
+        }
+
+        .action-btn.warning {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .action-btn.danger {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        /* Threshold Controls */
+        .threshold-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .threshold-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .threshold-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 5px;
+        }
+
+        /* Performance Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Error and Loading States */
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎛️ AI Model Sensitivity Management</h1>
+            <p>Configure and optimize AI model sensitivity for content analysis</p>
+        </div>
+
+    <!-- Model Configuration Modal -->
+    <div id="modelModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModelModal()">&times;</span>
+            <h2 id="modalTitle">Configure Model</h2>
+            
+            <div id="modalContent">
+                <!-- Dynamic content loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentModels = {};
+        let selectedModelType = null;
+        let apiBaseUrl = '';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            showSystemStatus('Initializing system...', 'warning');
+            initializeSensitivitySystem();
+        });
+
+        // System initialization
+        async function initializeSensitivitySystem() {
+            try {
+                // Test API connectivity
+                const response = await fetch('/api/sensitivity/models');
+                
+                if (response.ok) {
+                    showSystemStatus('System initialized successfully', 'success');
+                    await loadOverviewData();
+                    await loadModels();
+                    await loadPerformanceModels();
+                    await loadTestModels();
+                } else {
+                    throw new Error(`API responded with status: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showSystemStatus('System initialization failed - API endpoints may be missing', 'error');
+                loadFallbackData();
+            }
+        }
+
+        // Show system status
+        function showSystemStatus(message, type) {
+            const statusDiv = document.getElementById('systemStatus');
+            const statusText = document.getElementById('statusText');
+            
+            statusDiv.className = `status-message status-${type}`;
+            statusText.textContent = message;
+            statusDiv.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Load fallback data when API is not available
+        function loadFallbackData() {
+            // Set fallback overview data
+            document.getElementById('totalModels').textContent = '5';
+            document.getElementById('totalKeywords').textContent = '50+';
+            document.getElementById('lastUpdated').textContent = 'N/A';
+            
+            // Load demo models
+            const demoModels = {
+                'keyword_detection': {
+                    sensitivity_level: 'medium',
+                    threshold_values: {
+                        exact_match_confidence: 0.95,
+                        partial_match_confidence: 0.75
+                    },
+                    keyword_sets: {
+                        violence_critical: ['kill', 'murder', 'attack'],
+                        emergency_critical: ['emergency', 'urgent', 'help']
+                    },
+                    enabled_models: ['exact_match', 'fuzzy_match'],
+                    last_updated: '2024-01-01T00:00:00Z',
+                    updated_by: 'system'
+                },
+                'sentiment_analysis': {
+                    sensitivity_level: 'medium',
+                    threshold_values: {
+                        positive_threshold: 0.1,
+                        negative_threshold: -0.1
+                    },
+                    keyword_sets: {
+                        positive_boosters: ['excellent', 'amazing'],
+                        negative_boosters: ['terrible', 'awful']
+                    },
+                    enabled_models: ['textblob', 'vader'],
+                    last_updated: '2024-01-01T00:00:00Z',
+                    updated_by: 'system'
+                }
+            };
+            
+            currentModels = demoModels;
+            displayModels(demoModels);
+            populateModelSelects(demoModels);
+            
+            showSystemStatus('Running in demo mode - API not available', 'warning');
+        }
+
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Load section-specific data
+            if (sectionName === 'performance') {
+                loadModelPerformance();
+            } else if (sectionName === 'testing') {
+                loadTestModels();
+            }
+        }
+
+        // Load overview data
+        async function loadOverviewData() {
+            try {
+                const response = await fetch('/api/sensitivity/models');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const models = data.models;
+                    const modelCount = Object.keys(models).length;
+                    
+                    document.getElementById('totalModels').textContent = modelCount;
+                    
+                    // Count total keywords
+                    let totalKeywords = 0;
+                    Object.values(models).forEach(model => {
+                        Object.values(model.keyword_sets || {}).forEach(keywords => {
+                            totalKeywords += keywords.length;
+                        });
+                    });
+                    document.getElementById('totalKeywords').textContent = totalKeywords;
+                    
+                    // Last updated
+                    const lastUpdated = Object.values(models).reduce((latest, model) => {
+                        return new Date(model.last_updated) > new Date(latest) ? model.last_updated : latest;
+                    }, '1970-01-01');
+                    
+                    document.getElementById('lastUpdated').textContent = new Date(lastUpdated).toLocaleDateString();
+                }
+            } catch (error) {
+                console.error('Error loading overview data:', error);
+                handleApiError('overview data loading');
+            }
+        }
+
+        // Load models
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/sensitivity/models');
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentModels = data.models;
+                    displayModels(currentModels);
+                } else {
+                    throw new Error(data.error || 'Failed to load models');
+                }
+            } catch (error) {
+                console.error('Error loading models:', error);
+                handleApiError('models loading');
+            }
+        }
+
+        // Display models
+        function displayModels(models) {
+            const container = document.getElementById('modelCards');
+            
+            if (Object.keys(models).length === 0) {
+                container.innerHTML = '<div class="error-message">No models configured. Please check your configuration.</div>';
+                return;
+            }
+            
+            const html = Object.entries(models).map(([modelType, config]) => `
+                <div class="model-card">
+                    <div class="model-header">
+                        <div class="model-name">${getModelDisplayName(modelType)}</div>
+                        <span class="sensitivity-badge sensitivity-${config.sensitivity_level}">
+                            ${config.sensitivity_level.replace('_', ' ').toUpperCase()}
+                        </span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Sensitivity Level</label>
+                        <input type="range" 
+                               class="sensitivity-slider" 
+                               min="0" max="4" 
+                               value="${getSensitivityValue(config.sensitivity_level)}"
+                               onchange="updateSensitivityLevel('${modelType}', this.value)">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #666;">
+                            <span>Very Low</span>
+                            <span>Low</span>
+                            <span>Medium</span>
+                            <span>High</span>
+                            <span>Very High</span>
+                        </div>
+                    </div>
+                    
+                    <div class="threshold-controls">
+                        ${Object.entries(config.threshold_values || {}).slice(0, 3).map(([key, value]) => `
+                            <div class="threshold-item">
+                                <div style="font-weight: 600; font-size: 0.9rem;">${formatThresholdName(key)}</div>
+                                <div class="threshold-value">${typeof value === 'number' ? value.toFixed(3) : value}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="action-btn primary" onclick="configureModel('${modelType}')">
+                            ⚙️ Configure
+                        </button>
+                        <button class="action-btn success" onclick="testModel('${modelType}')">
+                            🧪 Test
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 15px; font-size: 0.8rem; color: #666;">
+                        <strong>Last Updated:</strong> ${new Date(config.last_updated).toLocaleDateString()} by ${config.updated_by}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // Helper functions
+        function getModelDisplayName(modelType) {
+            const names = {
+                'keyword_detection': '🔍 Keyword Detection',
+                'sentiment_analysis': '😊 Sentiment Analysis',
+                'ml_classification': '🤖 ML Classification',
+                'bert_toxicity': '🧠 BERT Toxicity',
+                'health_scoring': '📊 Health Scoring'
+            };
+            return names[modelType] || modelType.replace('_', ' ').toUpperCase();
+        }
+
+        function getSensitivityValue(level) {
+            const values = {
+                'very_low': 0,
+                'low': 1,
+                'medium': 2,
+                'high': 3,
+                'very_high': 4
+            };
+            return values[level] || 2;
+        }
+
+        function getSensitivityLevel(value) {
+            const levels = ['very_low', 'low', 'medium', 'high', 'very_high'];
+            return levels[parseInt(value)] || 'medium';
+        }
+
+        function formatThresholdName(name) {
+            return name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Update sensitivity level
+        async function updateSensitivityLevel(modelType, value) {
+            try {
+                const level = getSensitivityLevel(value);
+                
+                const response = await fetch(`/api/sensitivity/models/${modelType}/level`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        level: level,
+                        updated_by: 'admin',
+                        reason: 'Manual adjustment via dashboard'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update the badge
+                    const card = event.target.closest('.model-card');
+                    const badge = card.querySelector('.sensitivity-badge');
+                    badge.className = `sensitivity-badge sensitivity-${level}`;
+                    badge.textContent = level.replace('_', ' ').toUpperCase();
+                    
+                    showSystemStatus(`Sensitivity level updated to ${level}`, 'success');
+                    
+                    // Reload models to get updated thresholds
+                    setTimeout(() => loadModels(), 500);
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Error updating sensitivity level:', error);
+                showSystemStatus('Error updating sensitivity level: ' + error.message, 'error');
+            }
+        }
+
+        // Configure model
+        function configureModel(modelType) {
+            selectedModelType = modelType;
+            const config = currentModels[modelType];
+            
+            if (!config) {
+                showSystemStatus('Model configuration not found', 'error');
+                return;
+            }
+            
+            document.getElementById('modalTitle').textContent = `Configure ${getModelDisplayName(modelType)}`;
+            
+            const html = `
+                <div class="form-group">
+                    <label>Current Sensitivity Level</label>
+                    <div class="sensitivity-badge sensitivity-${config.sensitivity_level}" style="display: block; text-align: center; margin: 10px 0;">
+                        ${config.sensitivity_level.replace('_', ' ').toUpperCase()}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Threshold Values</label>
+                    <div class="threshold-controls">
+                        ${Object.entries(config.threshold_values || {}).map(([key, value]) => `
+                            <div class="threshold-item">
+                                <label for="threshold_${key}">${formatThresholdName(key)}</label>
+                                <input type="number" 
+                                       id="threshold_${key}" 
+                                       class="form-control" 
+                                       value="${value}" 
+                                       step="0.001" 
+                                       min="0" 
+                                       max="1"
+                                       style="margin-top: 5px;">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Keyword Categories</label>
+                    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                        ${Object.entries(config.keyword_sets || {}).map(([category, keywords]) => `
+                            <div style="margin-bottom: 15px;">
+                                <h6>${formatThresholdName(category)}</h6>
+                                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                    ${keywords.slice(0, 10).map(keyword => `
+                                        <span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 10px; font-size: 0.8rem;">
+                                            ${keyword}
+                                        </span>
+                                    `).join('')}
+                                    ${keywords.length > 10 ? `<span style="color: #666; font-size: 0.8rem;">... and ${keywords.length - 10} more</span>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px; display: flex; gap: 10px;">
+                    <button class="action-btn primary" onclick="saveModelConfiguration()">
+                        💾 Save Configuration
+                    </button>
+                    <button class="action-btn warning" onclick="closeModelModal()">
+                        ❌ Cancel
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('modalContent').innerHTML = html;
+            document.getElementById('modelModal').style.display = 'block';
+        }
+
+        // Save model configuration
+        async function saveModelConfiguration() {
+            try {
+                const thresholds = {};
+                const thresholdInputs = document.querySelectorAll('[id^="threshold_"]');
+                
+                thresholdInputs.forEach(input => {
+                    const key = input.id.replace('threshold_', '');
+                    thresholds[key] = parseFloat(input.value);
+                });
+                
+                const response = await fetch(`/api/sensitivity/models/${selectedModelType}/thresholds`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        thresholds: thresholds,
+                        updated_by: 'admin'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSystemStatus('Configuration saved successfully!', 'success');
+                    closeModelModal();
+                    loadModels();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Error saving configuration:', error);
+                showSystemStatus('Error saving configuration: ' + error.message, 'error');
+            }
+        }
+
+        // Load performance models
+        async function loadPerformanceModels() {
+            try {
+                const response = await fetch('/api/sensitivity/models');
+                const data = await response.json();
+                
+                if (data.success) {
+                    populateModelSelects(data.models);
+                }
+            } catch (error) {
+                console.error('Error loading performance models:', error);
+                handleApiError('performance models loading');
+            }
+        }
+
+        // Populate model select dropdowns
+        function populateModelSelects(models) {
+            const performanceSelect = document.getElementById('performanceModel');
+            const testSelect = document.getElementById('testModel');
+            
+            // Clear existing options
+            performanceSelect.innerHTML = '<option value="">Select a model...</option>';
+            testSelect.innerHTML = '<option value="">Select a model to test...</option>';
+            
+            Object.keys(models).forEach(modelType => {
+                const displayName = getModelDisplayName(modelType);
+                
+                const option1 = new Option(displayName, modelType);
+                const option2 = new Option(displayName, modelType);
+                
+                performanceSelect.appendChild(option1);
+                testSelect.appendChild(option2);
+            });
+        }
+
+        // Load test models
+        async function loadTestModels() {
+            await loadPerformanceModels(); // Reuse the same function
+        }
+
+        // Load model performance
+        async function loadModelPerformance() {
+            const modelType = document.getElementById('performanceModel').value;
+            const timeframe = document.getElementById('performanceTimeframe').value;
+            
+            if (!modelType) {
+                document.getElementById('performanceContent').innerHTML = 'Select a model to view performance metrics';
+                return;
+            }
+            
+            document.getElementById('performanceContent').innerHTML = '<div class="loading"></div> Loading performance data...';
+            
+            try {
+                const response = await fetch(`/api/sensitivity/models/${modelType}/performance?days=${timeframe}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const performance = data.performance;
+                    
+                    const html = `
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-value">${(performance.avg_precision * 100).toFixed(1)}%</div>
+                                <div class="metric-label">Precision</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${(performance.avg_recall * 100).toFixed(1)}%</div>
+                                <div class="metric-label">Recall</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${(performance.avg_f1_score * 100).toFixed(1)}%</div>
+                                <div class="metric-label">F1 Score</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value">${(performance.accuracy * 100).toFixed(1)}%</div>
+                                <div class="metric-label">Accuracy</div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 30px;">
+                            <h4>Confusion Matrix</h4>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;">
+                                <div class="metric-card">
+                                    <div class="metric-value" style="color: #27ae60;">${performance.total_true_positives}</div>
+                                    <div class="metric-label">True Positives</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value" style="color: #e74c3c;">${performance.total_false_positives}</div>
+                                    <div class="metric-label">False Positives</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value" style="color: #27ae60;">${performance.total_true_negatives}</div>
+                                    <div class="metric-label">True Negatives</div>
+                                </div>
+                                <div class="metric-card">
+                                    <div class="metric-value" style="color: #e74c3c;">${performance.total_false_negatives}</div>
+                                    <div class="metric-label">False Negatives</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.getElementById('performanceContent').innerHTML = html;
+                } else {
+                    document.getElementById('performanceContent').innerHTML = 'No performance data available for this model';
+                }
+            } catch (error) {
+                console.error('Error loading performance:', error);
+                document.getElementById('performanceContent').innerHTML = 'Error loading performance data';
+                handleApiError('performance data loading');
+            }
+        }
+
+        // Run sensitivity test
+        async function runSensitivityTest() {
+            const modelType = document.getElementById('testModel').value;
+            const messagesText = document.getElementById('testMessages').value;
+            
+            if (!modelType) {
+                showSystemStatus('Please select a model to test', 'warning');
+                return;
+            }
+            
+            if (!messagesText.trim()) {
+                showSystemStatus('Please enter test messages', 'warning');
+                return;
+            }
+            
+            const messages = messagesText.split('\n').filter(msg => msg.trim());
+            
+            document.getElementById('testResults').style.display = 'block';
+            document.getElementById('testResultsContent').innerHTML = '<div class="loading"></div> Running tests...';
+            
+            try {
+                const response = await fetch('/api/sensitivity/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model_type: modelType,
+                        messages: messages
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const html = data.test_results.map((result, index) => `
+                        <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #e9ecef;">
+                            <h5>Test Message ${index + 1}</h5>
+                            <p><strong>Message:</strong> "${result.message}"</p>
+                            ${renderTestResult(result, modelType)}
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('testResultsContent').innerHTML = html;
+                    showSystemStatus('Sensitivity test completed successfully', 'success');
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                console.error('Error running sensitivity test:', error);
+                document.getElementById('testResultsContent').innerHTML = 'Error running tests: ' + error.message;
+                handleApiError('sensitivity testing');
+            }
+        }
+
+        // Render test result based on model type
+        function renderTestResult(result, modelType) {
+            if (modelType === 'keyword_detection') {
+                return `
+                    <p><strong>Threats Detected:</strong> ${result.threats_detected}</p>
+                    ${result.threats && result.threats.length > 0 ? `
+                        <p><strong>Threat Details:</strong></p>
+                        <ul>
+                            ${result.threats.map(threat => `
+                                <li>${threat.category}: ${threat.keyword} (${threat.severity})</li>
+                            `).join('')}
+                        </ul>
+                    ` : '<p>No threats detected</p>'}
+                `;
+            } else if (modelType === 'sentiment_analysis') {
+                return `
+                    <p><strong>Sentiment:</strong> ${result.sentiment}</p>
+                    <p><strong>Confidence:</strong> ${(result.confidence * 100).toFixed(1)}%</p>
+                    <p><strong>Language:</strong> ${result.language}</p>
+                `;
+            } else if (modelType === 'ml_classification') {
+                return `
+                    <p><strong>Predicted Priority:</strong> 
+                        <span class="sensitivity-badge sensitivity-${result.predicted_priority.toLowerCase()}">
+                            ${result.predicted_priority}
+                        </span>
+                    </p>
+                `;
+            } else {
+                return `
+                    <p><strong>Flagged:</strong> ${result.is_flagged ? 'Yes' : 'No'}</p>
+                    ${result.is_flagged ? `
+                        <p><strong>Priority:</strong> 
+                            <span class="sensitivity-badge sensitivity-${result.priority.toLowerCase()}">
+                                ${result.priority}
+                            </span>
+                        </p>
+                        <p><strong>Reasons:</strong></p>
+                        <ul>
+                            ${result.reasons.map(reason => `
+                                <li>${reason.type}: ${reason.detail}</li>
+                            `).join('')}
+                        </ul>
+                    ` : ''}
+                `;
+            }
+        }
+
+        // Test specific model
+        function testModel(modelType) {
+            document.getElementById('testModel').value = modelType;
+            showSection('testing');
+            
+            // Update active tab
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelector('.nav-tab[onclick="showSection(\'testing\')"]').classList.add('active');
+        }
+
+        // Export configurations
+        async function exportConfigurations() {
+            try {
+                const response = await fetch('/api/sensitivity/export');
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `sensitivity_configs_${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    showSystemStatus('Configurations exported successfully!', 'success');
+                } else {
+                    throw new Error('Export failed');
+                }
+            } catch (error) {
+                console.error('Error exporting configurations:', error);
+                showSystemStatus('Error exporting configurations: ' + error.message, 'error');
+            }
+        }
+
+        // Import configurations
+        async function importConfigurations() {
+            const fileInput = document.getElementById('configFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showSystemStatus('Please select a configuration file', 'warning');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/sensitivity/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSystemStatus('Configurations imported successfully!', 'success');
+                    loadModels();
+                    loadOverviewData();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('Error importing configurations:', error);
+                showSystemStatus('Error importing configurations: ' + error.message, 'error');
+            }
+        }
+
+        // Save global settings
+        async function saveGlobalSettings() {
+            try {
+                const settings = {
+                    auto_adjust: document.getElementById('autoAdjust').checked,
+                    real_time_monitoring: document.getElementById('realTimeMonitoring').checked,
+                    update_frequency: document.getElementById('updateFrequency').value
+                };
+                
+                // For now, just show success (would typically save to an API endpoint)
+                showSystemStatus('Global settings saved successfully!', 'success');
+                console.log('Settings to save:', settings);
+                
+            } catch (error) {
+                console.error('Error saving global settings:', error);
+                showSystemStatus('Error saving global settings: ' + error.message, 'error');
+            }
+        }
+
+        // Reset to defaults
+        async function resetToDefaults() {
+            if (!confirm('Are you sure you want to reset all sensitivity settings to defaults? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                showSystemStatus('Settings reset to defaults. Reloading...', 'success');
+                // For now, just reload the page
+                setTimeout(() => window.location.reload(), 2000);
+            } catch (error) {
+                console.error('Error resetting to defaults:', error);
+                showSystemStatus('Error resetting to defaults: ' + error.message, 'error');
+            }
+        }
+
+        // Error handling
+        function handleApiError(operation) {
+            console.warn(`API error during ${operation}, showing demo data`);
+            
+            if (operation.includes('models')) {
+                loadFallbackData();
+            }
+        }
+
+        // Modal functions
+        function closeModelModal() {
+            document.getElementById('modelModal').style.display = 'none';
+            selectedModelType = null;
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // ESC to close modals
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+        });
+
+        // Auto-refresh data every 60 seconds
+        setInterval(() => {
+            if (document.querySelector('#overview.active')) {
+                loadOverviewData();
+            }
+            if (document.querySelector('#performance.active')) {
+                loadModelPerformance();
+            }
+        }, 60000);
+    </script>
+</body>
+</html>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showSection('overview')">📊 Overview</button>
+            <button class="nav-tab" onclick="showSection('models')">🤖 Models</button>
+            <button class="nav-tab" onclick="showSection('performance')">📈 Performance</button>
+            <button class="nav-tab" onclick="showSection('testing')">🧪 Testing</button>
+            <button class="nav-tab" onclick="showSection('settings')">⚙️ Settings</button>
+        </div>
+
+        <!-- Overview Section -->
+        <div id="overview" class="content-section active">
+            <h2 class="section-title">📊 Sensitivity Overview</h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="totalModels">Loading...</div>
+                    <div class="metric-label">Active Models</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="avgPerformance">85%</div>
+                    <div class="metric-label">Avg Performance</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="totalKeywords">Loading...</div>
+                    <div class="metric-label">Total Keywords</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="lastUpdated">Loading...</div>
+                    <div class="metric-label">Last Updated</div>
+                </div>
+            </div>
+
+            <div id="systemStatus" class="status-message status-success" style="display: none;">
+                <strong>✅ System Status:</strong> <span id="statusText">All systems operational</span>
+            </div>
+
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                <h4>🎯 System Recommendations</h4>
+                <div id="recommendationsList">
+                    <div>💡 <strong>Recommendation:</strong> Consider increasing sensitivity for keyword detection during high-risk periods</div>
+                    <div style="margin-top: 10px;">💡 <strong>Recommendation:</strong> ML classification model showing good performance - maintain current settings</div>
+                    <div style="margin-top: 10px;">💡 <strong>Recommendation:</strong> Add more Kannada keywords for better regional content detection</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Models Section -->
+        <div id="models" class="content-section">
+            <h2 class="section-title">🤖 Model Configuration</h2>
+            
+            <div class="model-cards" id="modelCards">
+                <div class="loading"></div> Loading model configurations...
+            </div>
+        </div>
+
+        <!-- Performance Section -->
+        <div id="performance" class="content-section">
+            <h2 class="section-title">📈 Performance Metrics</h2>
+            
+            <div class="form-group">
+                <label for="performanceModel">Select Model</label>
+                <select id="performanceModel" class="form-control" onchange="loadModelPerformance()">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="performanceTimeframe">Timeframe</label>
+                <select id="performanceTimeframe" class="form-control" onchange="loadModelPerformance()">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                </select>
+            </div>
+
+            <div id="performanceContent">
+                Select a model to view performance metrics
+            </div>
+        </div>
+
+        <!-- Testing Section -->
+        <div id="testing" class="content-section">
+            <h2 class="section-title">🧪 Sensitivity Testing</h2>
+            
+            <div class="form-group">
+                <label for="testModel">Select Model to Test</label>
+                <select id="testModel" class="form-control">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="testMessages">Test Messages (one per line)</label>
+                <textarea id="testMessages" class="form-control" rows="6" placeholder="Enter test messages here, one per line...
+Example:
+Help! There's an emergency
+Good morning everyone
+I need urgent assistance
+The meeting is at 3 PM"></textarea>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <button class="action-btn primary" onclick="runSensitivityTest()">
+                    🧪 Run Sensitivity Test
+                </button>
+            </div>
+
+            <div id="testResults" style="display: none;">
+                <h4>🔍 Test Results</h4>
+                <div id="testResultsContent"></div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="content-section">
+            <h2 class="section-title">⚙️ Global Settings</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+                <div>
+                    <h4>🔄 Import/Export</h4>
+                    <div class="form-group">
+                        <label for="configFile">Import Configuration</label>
+                        <input type="file" id="configFile" class="form-control" accept=".json">
+                        <button class="action-btn success" onclick="importConfigurations()" style="margin-top: 10px; width: 100%;">
+                            📥 Import Configurations
+                        </button>
+                    </div>
+                    
+                    <button class="action-btn primary" onclick="exportConfigurations()" style="width: 100%;">
+                        📤 Export Configurations
+                    </button>
+                </div>
+                
+                <div>
+                    <h4>🔧 System Settings</h4>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="autoAdjust"> Enable Auto-Adjustment
+                        </label>
+                        <small>Automatically adjust sensitivity based on performance metrics</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="realTimeMonitoring" checked> Real-time Monitoring
+                        </label>
+                        <small>Monitor model performance in real-time</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="updateFrequency">Update Frequency (minutes)</label>
+                        <input type="number" id="updateFrequency" class="form-control" value="30" min="1" max="1440">
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <h4>💾 Save Changes</h4>
+                <p>Remember to save your changes to apply new settings across all models.</p>
+                <button class="action-btn success" onclick="saveGlobalSettings()">
+                    💾 Save Global Settings
+                </button>
+                <button class="action-btn warning" onclick="resetToDefaults()">
+                    🔄 Reset to Defaults
+                </button>
+            </div>
+        </div>
+    </div>

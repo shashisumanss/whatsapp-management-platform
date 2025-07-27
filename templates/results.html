@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results - WhatsApp Content Flagging</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            margin: 20px auto;
+            padding: 30px;
+            max-width: 1200px;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .priority-critical { background: #FF0000; color: white; }
+        .priority-high { background: #FF6B6B; color: white; }
+        .priority-medium { background: #FFA500; color: white; }
+        .priority-low { background: #FFD93D; color: black; }
+        .priority-normal { background: #4CAF50; color: white; }
+        .flagged-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .critical-alert {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">
+            <i class="fas fa-shield-alt me-3" style="color: #e74c3c;"></i>
+            Analysis Results
+        </h1>
+        
+        <!-- Security Alert if flagged content exists -->
+        {% if insights.flagged_content.total_flagged > 0 %}
+        <div class="critical-alert">
+            <h4><i class="fas fa-exclamation-triangle me-2"></i>Security Alert</h4>
+            <p class="mb-2"><strong>{{ insights.flagged_content.total_flagged }} messages flagged for review</strong></p>
+            <div>
+                {% for priority, count in insights.flagged_content.by_priority.items() %}
+                <span class="priority-badge priority-{{ priority.lower() }}">
+                    {{ priority }}: {{ count }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Overview Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card bg-light">
+                    <h3>{{ insights.total_messages }}</h3>
+                    <p class="mb-0">Total Messages</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-light">
+                    <h3>{{ insights.participants }}</h3>
+                    <p class="mb-0">Participants</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card {% if insights.flagged_content.total_flagged > 0 %}bg-danger text-white{% else %}bg-light{% endif %}">
+                    <h3>{{ insights.flagged_content.total_flagged }}</h3>
+                    <p class="mb-0">Flagged Messages</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card bg-light">
+                    <h3>{{ insights.languages|length }}</h3>
+                    <p class="mb-0">Languages</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analysis Chart -->
+        <div class="text-center mb-4">
+            <img src="{{ chart_url }}" class="img-fluid" style="max-width: 100%; border-radius: 10px;">
+        </div>
+        
+        <div class="row">
+            <!-- Sentiment Distribution -->
+            <div class="col-md-6">
+                <h4>Sentiment Distribution</h4>
+                <ul class="list-group mb-4">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><i class="fas fa-smile text-success me-2"></i>Positive</span>
+                        <strong>{{ insights.sentiment_distribution.positive }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><i class="fas fa-meh text-warning me-2"></i>Neutral</span>
+                        <strong>{{ insights.sentiment_distribution.neutral }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><i class="fas fa-frown text-danger me-2"></i>Negative</span>
+                        <strong>{{ insights.sentiment_distribution.negative }}</strong>
+                    </li>
+                </ul>
+                
+                <!-- Languages -->
+                <h4>Languages Detected</h4>
+                <ul class="list-group">
+                    {% for lang, count in insights.languages.items() %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ lang|title }}</span>
+                        <strong>{{ count }} messages</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <!-- Flagged Content -->
+            <div class="col-md-6">
+                {% if insights.flagged_content.total_flagged > 0 %}
+                <h4 class="text-danger">Flagged Content Analysis</h4>
+                
+                <!-- By Category -->
+                <h5>By Category:</h5>
+                <ul class="list-group mb-3">
+                    {% for category, count in insights.flagged_content.by_category.items() %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ category|title }}</span>
+                        <strong>{{ count }}</strong>
+                    </li>
+                    {% endfor %}
+                </ul>
+                
+                <!-- Critical Messages -->
+                <h5 class="text-danger">Critical Messages:</h5>
+                {% for msg in insights.flagged_content.critical_messages[:5] %}
+                <div class="flagged-message">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <span class="priority-badge priority-{{ msg.priority.lower() }}">
+                                {{ msg.priority }}
+                            </span>
+                            <strong>{{ msg.sender }}</strong>
+                        </div>
+                        <small class="text-muted">{{ msg.timestamp }}</small>
+                    </div>
+                    <p class="mb-0">{{ msg.message }}</p>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    No sensitive content detected
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Analyze Another Chat
+            </a>
+            <button class="btn btn-success" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Report
+            </button>
+        </div>
+    </div>
+</body>
+</html>
