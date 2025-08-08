@@ -28,6 +28,8 @@ import hashlib
 from collections import defaultdict
 import csv
 import statistics
+import requests
+
 
 # Configure logging
 logging.basicConfig(
@@ -1539,6 +1541,78 @@ def get_bulk_messages():
         logger.error(f"Error getting bulk messages: {str(e)}")
         return jsonify([])
 
+@app.route('/test123', methods=['GET'])
+def simple_test():
+    return jsonify({"message": "Route registration is working!"})
+
+@app.route('/health', methods=['GET'])
+def health_endpoint():
+    from datetime import datetime
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'version': '2.0.0',
+        'success': True
+    })
+
+@app.route('/api/status', methods=['GET'])
+def status_endpoint():
+    import os
+    from datetime import datetime
+    
+    whatsapp_configured = all([
+        os.getenv('WHATSAPP_ACCESS_TOKEN'),
+        os.getenv('WHATSAPP_PHONE_NUMBER_ID'),
+        os.getenv('WHATSAPP_WEBHOOK_TOKEN'),
+        os.getenv('WHATSAPP_BUSINESS_ACCOUNT_ID')
+    ])
+    
+    return jsonify({
+        'success': True,
+        'status': 'operational',
+        'whatsapp_api': 'configured' if whatsapp_configured else 'not_configured',
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/whatsapp/status', methods=['GET'])
+def whatsapp_endpoint():
+    import os
+    try:
+        import requests
+        access_token = os.getenv('WHATSAPP_ACCESS_TOKEN')
+        phone_id = os.getenv('WHATSAPP_PHONE_NUMBER_ID')
+        
+        if not access_token or not phone_id:
+            return jsonify({
+                'success': False,
+                'error': 'WhatsApp API not configured - missing credentials'
+            })
+        
+        url = f"https://graph.facebook.com/v18.0/{phone_id}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify({
+                'success': True,
+                'status': 'configured',
+                'phone_number': data.get('display_phone_number'),
+                'verified_name': data.get('verified_name')
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'API returned {response.status_code}'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+
 @app.route('/api/scheduled_messages')
 def get_scheduled_messages():
     """Get scheduled messages"""
@@ -1698,6 +1772,14 @@ if __name__ == '__main__':
     print("🔒 ENHANCED: CORS support, secure sessions, comprehensive error handling")
     print("🚀 PRODUCTION READY: Enhanced logging, health checks, graceful degradation")
     print()
+    # Debug: Print all registered routes
+    print("\n🔍 REGISTERED ROUTES DEBUG:")
+    print("=" * 50)
+    for rule in app.url_map.iter_rules():
+        methods = ', '.join(rule.methods - {'OPTIONS', 'HEAD'})
+        print(f"{methods:10} {rule.rule}")
+    print("=" * 50)
+
     
     # Run the application
     try:
@@ -1717,6 +1799,8 @@ else:
     init_all_databases()
     initialize_management_system()
     create_demo_message_data()
+
+
 @app.route('/api/analytics/summary')
 def get_analytics_summary():
     """Get analytics summary for dashboard"""
@@ -2077,6 +2161,28 @@ def export_group_members(group_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/status', methods=['GET'])
+def api_status():
+    """System status endpoint"""
+    from datetime import datetime
+    import os
+    
+    whatsapp_configured = all([
+        os.getenv('WHATSAPP_ACCESS_TOKEN'),
+        os.getenv('WHATSAPP_PHONE_NUMBER_ID'),
+        os.getenv('WHATSAPP_WEBHOOK_TOKEN'),
+        os.getenv('WHATSAPP_BUSINESS_ACCOUNT_ID')
+    ])
+    
+    return jsonify({
+        'success': True,
+        'status': 'operational',
+        'whatsapp_api': 'configured' if whatsapp_configured else 'not_configured',
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 
 # ===== ANALYTICS API ROUTES =====
 
@@ -2624,6 +2730,60 @@ def simulate_message_analysis():
             'error': str(e)
         }), 500
 
+# Add to your main Flask app file (app.py)
+from flask import Flask, jsonify, request
+
+
+
+@app.route('/api/whatsapp/status', methods=['GET'])
+def whatsapp_status():
+    """Check WhatsApp API specific status"""
+    access_token = os.getenv('WHATSAPP_ACCESS_TOKEN')
+    phone_id = os.getenv('WHATSAPP_PHONE_NUMBER_ID')
+    
+    if not access_token or not phone_id:
+        return jsonify({
+            'success': False,
+            'error': 'WhatsApp API not configured'
+        }), 400
+    
+    # Test API connectivity
+    try:
+        url = f"https://graph.facebook.com/v18.0/{phone_id}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return jsonify({
+                'success': True,
+                'status': 'configured',
+                'phone_number': data.get('display_phone_number'),
+                'verified_name': data.get('verified_name'),
+                'quality_rating': data.get('quality_rating')
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'API Error: {response.status_code}'
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Basic health check"""
+    return jsonify({
+        'success': True,
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 @app.route('/api/flag_message', methods=['POST'])
 def flag_message_test():
     """Test message flagging functionality"""
@@ -2647,53 +2807,7 @@ def flag_message_test():
             'error': str(e)
         }), 500
 
-# ===== HEALTH CHECK ENDPOINTS =====
 
-@app.route('/health')
-def health_check():
-    """Simple health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
-        'version': '2.0.0'
-    })
-
-@app.route('/api/status')
-def system_status():
-    """Comprehensive system status check"""
-    try:
-        status = {
-            'database': 'healthy',
-            'analyzer': 'healthy',
-            'whatsapp_service': 'unknown',
-            'group_manager': 'healthy',
-            'analytics_engine': 'healthy',
-            'sensitivity_manager': 'healthy'
-        }
-        
-        try:
-            if whatsapp_service:
-                wa_health = whatsapp_service.get_health_status()
-                status['whatsapp_service'] = 'healthy' if wa_health.get('healthy') else 'unhealthy'
-        except:
-            status['whatsapp_service'] = 'unavailable'
-        
-        overall_healthy = all(s in ['healthy', 'unknown'] for s in status.values())
-        
-        return jsonify({
-            'success': True,
-            'overall_status': 'healthy' if overall_healthy else 'degraded',
-            'components': status,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        logger.error(f"Error checking system status: {str(e)}")
-        return jsonify({
-            'success': False,
-            'overall_status': 'unhealthy',
-            'error': str(e)
-        }), 500
 
 # ===== INITIALIZATION FUNCTIONS =====
 
