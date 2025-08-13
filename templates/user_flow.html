@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Platform - User Flow</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #25D366;
+            --secondary-color: #128C7E;
+            --accent-color: #075E54;
+            --warning-color: #ff6b6b;
+            --info-color: #4ecdc4;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .flow-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 20px,
+                rgba(255,255,255,0.1) 20px,
+                rgba(255,255,255,0.1) 40px
+            );
+            animation: slide 30s linear infinite;
+        }
+
+        @keyframes slide {
+            0% { transform: translateX(-40px) translateY(-40px); }
+            100% { transform: translateX(0px) translateY(0px); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .flow-section {
+            padding: 40px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .flow-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            color: var(--secondary-color);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .user-type {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .user-type:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .user-persona {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .persona-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            margin-right: 20px;
+            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.3);
+        }
+
+        .persona-info h4 {
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+        }
+
+        .persona-info p {
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .flow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .step-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            position: relative;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .step-card:hover {
+            border-color: var(--primary-color);
+            background: white;
+            transform: scale(1.02);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--primary-color);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .step-icon {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .step-title {
+            color: var(--secondary-color);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .step-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .feature-highlight {
+            background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(18, 140, 126, 0.1));
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .feature-highlight h6 {
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+        }
+
+        .feature-highlight p {
+            margin-bottom: 0;
+            font-size: 14px;
+        }
+
+        .journey-map {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .navigation-tabs {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid var(--primary-color);
+            border-radius: 25px;
+            color: var(--secondary-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--primary-color);
+            color: white;
+            text-decoration: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .back-to-platform {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-to-platform:hover {
+            background: var(--secondary-color);
+            color: white;
+            text-decoration: none;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .flow-steps {
+                grid-template-columns: 1fr;
+            }
+            
+            .navigation-tabs {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .nav-tab {
+                margin: 5px 0;
+            }
+            
+            .back-to-platform {
+                position: relative;
+                margin: 20px;
+                display: inline-block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-to-platform">
+        <i class="fas fa-arrow-left me-2"></i>Back to Platform
+    </a>
+
+    <div class="flow-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1 class="display-4 fw-bold mb-3">
+                    <i class="fas fa-route me-3"></i>
+                    User Flow & Journey Map
+                </h1>
+                <p class="lead">WhatsApp Management Platform - Complete User Experience Guide</p>
+                <div class="mt-4">
+                    <a href="/whatsapp-setup" class="btn btn-light btn-lg me-3">
+                        <i class="fas fa-qrcode me-2"></i>Try Setup
+                    </a>
+                    <a href="/management" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-chart-bar me-2"></i>View Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="navigation-tabs">
+            <a href="#overview" class="nav-tab active" onclick="showTab('overview')">Overview</a>
+            <a href="#admin-flow" class="nav-tab" onclick="showTab('admin-flow')">Admin Flow</a>
+            <a href="#operator-flow" class="nav-tab" onclick="showTab('operator-flow')">Operator Flow</a>
+            <a href="#quick-start" class="nav-tab" onclick="showTab('quick-start')">Quick Start</a>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="flow-section">
+                <h2 class="section-title">Platform User Types</h2>
+                
+                <div class="user-type">
+                    <div class="user-persona">
+                        <div class="persona-avatar">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <div class="persona-info">
+                            <h4>System Administrator</h4>
+                            <p>Manages platform configuration, WhatsApp setup, and system monitoring</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <h6>Primary Tasks:</h6>
+                        <p>WhatsApp Web connection, user management, system configuration, security oversight</p>
+                    </div>
+                </div>
+
+                <div class="user-type">
+                    <div class="user-persona">
+                        <div class="persona-avatar">
+                            <i class="fas fa-headset"></i>
+                        </div>
+                        <div class="persona-info">
+                            <h4>Message Operator</h4>
+                            <p>Handles daily message monitoring, ticket management, and emergency response</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <h6>Primary Tasks:</h6>
+                        <p>Real-time monitoring, flagged message review, ticket creation, bulk messaging</p>
+                    </div>
+                </div>
+
+                <div class="user-type">
+                    <div class="user-persona">
+                        <div class="persona-avatar">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="persona-info">
+                            <h4>Data Analyst</h4>
+                            <p>Analyzes sentiment trends, generates reports, and monitors analytics</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <h6>Primary Tasks:</h6>
+                        <p>Data analysis, report generation, trend identification, export to external systems</p>
+                    </div>
+                </div>
+
+                <div class="user-type">
+                    <div class="user-persona">
+                        <div class="persona-avatar">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="persona-info">
+                            <h4>Field Coordinator</h4>
+                            <p>Manages groups, coordinates operations, handles public communication</p>
+                        </div>
+                    </div>
+                    <div class="feature-highlight">
+                        <h6>Primary Tasks:</h6>
+                        <p>Group management, member coordination, bulk operations, field communication</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Flow Tab -->
+        <div id="admin-flow" class="tab-content">
+            <div class="flow-section">
+                <h2 class="section-title">Administrator Workflow</h2>
+                
+                <div class="journey-map">
+                    <h4 class="text-center mb-4">Initial Platform Setup</h4>
+                    <div class="flow-steps">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <div class="step-icon">
+                                <i class="fas fa-sign-in-alt"></i>
+                            </div>
+                            <h5 class="step-title">Platform Access</h5>
+                            <p class="step-description">Access the management platform and review the main dashboard interface.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <div class="step-icon">
+                                <i class="fas fa-mobile-alt"></i>
+                            </div>
+                            <h5 class="step-title">WhatsApp Setup</h5>
+                            <p class="step-description">Navigate to WhatsApp Setup page and choose connection method (Web or API).</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <div class="step-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <h5 class="step-title">QR Connection</h5>
+                            <p class="step-description">Generate QR code, scan with phone, establish WhatsApp Web connection.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <div class="step-icon">
+                                <i class="fas fa-users-cog"></i>
+                            </div>
+                            <h5 class="step-title">User Management</h5>
+                            <p class="step-description">Create user accounts, assign roles, configure permissions and access levels.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <div class="step-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <h5 class="step-title">ML Configuration</h5>
+                            <p class="step-description">Configure ML models, set flagging thresholds, customize alert priorities.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <div class="step-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <h5 class="step-title">Monitor Operations</h5>
+                            <p class="step-description">Monitor platform performance, review logs, ensure optimal operation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operator Flow Tab -->
+        <div id="operator-flow" class="tab-content">
+            <div class="flow-section">
+                <h2 class="section-title">Daily Operator Workflow</h2>
+                
+                <div class="journey-map">
+                    <h4 class="text-center mb-4">Daily Operations Cycle</h4>
+                    <div class="flow-steps">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <div class="step-icon">
+                                <i class="fas fa-tachometer-alt"></i>
+                            </div>
+                            <h5 class="step-title">Dashboard Review</h5>
+                            <p class="step-description">Check overnight alerts, review system status, assess pending items.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <div class="step-icon">
+                                <i class="fas fa-flag"></i>
+                            </div>
+                            <h5 class="step-title">Flagged Messages</h5>
+                            <p class="step-description">Review AI-flagged messages, prioritize by urgency, assess content validity.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <div class="step-icon">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <h5 class="step-title">Ticket Creation</h5>
+                            <p class="step-description">Create tickets from flagged messages, assign to teams, track progress.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <div class="step-icon">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <h5 class="step-title">Real-time Monitor</h5>
+                            <p class="step-description">Monitor live message feed, respond to alerts, handle emergencies.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <div class="step-icon">
+                                <i class="fas fa-paper-plane"></i>
+                            </div>
+                            <h5 class="step-title">Bulk Operations</h5>
+                            <p class="step-description">Send scheduled messages, broadcast announcements, manage groups.</p>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <div class="step-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <h5 class="step-title">Daily Summary</h5>
+                            <p class="step-description">Complete shift summary, update status, prepare handover notes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Start Tab -->
+        <div id="quick-start" class="tab-content">
+            <div class="flow-section">
+                <h2 class="section-title">Quick Start Guide</h2>
+                
+                <div class="journey-map">
+                    <h4 class="text-center mb-4">Get Started in 4 Steps</h4>
+                    <div class="flow-steps">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <div class="step-icon">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <h5 class="step-title">Explore Dashboard</h5>
+                            <p class="step-description">Start at the main dashboard to see upload and analysis features.</p>
+                            <a href="/" class="btn btn-sm btn-primary mt-2">
+                                <i class="fas fa-external-link-alt me-1"></i>Open Dashboard
+                            </a>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <div class="step-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <h5 class="step-title">Connect WhatsApp</h5>
+                            <p class="step-description">Set up WhatsApp Web connection by scanning the QR code.</p>
+                            <a href="/whatsapp-setup" class="btn btn-sm btn-success mt-2">
+                                <i class="fas fa-external-link-alt me-1"></i>Setup WhatsApp
+                            </a>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <div class="step-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h5 class="step-title">Manage Groups</h5>
+                            <p class="step-description">Create and manage WhatsApp groups with bulk operations.</p>
+                            <a href="/groups" class="btn btn-sm btn-info mt-2">
+                                <i class="fas fa-external-link-alt me-1"></i>Manage Groups
+                            </a>
+                        </div>
+
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <div class="step-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h5 class="step-title">View Analytics</h5>
+                            <p class="step-description">Monitor real-time analytics and AI-generated insights.</p>
+                            <a href="/management" class="btn btn-sm btn-warning mt-2">
+                                <i class="fas fa-external-link-alt me-1"></i>View Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-highlight">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Pro Tips:</h6>
+                    <p>• Start with WhatsApp Web setup for immediate testing<br>
+                    • Upload sample chat files to test AI analysis<br>
+                    • Use the management dashboard to monitor all activities<br>
+                    • Create test groups to familiarize yourself with bulk operations</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Add active class to clicked nav tab
+            event.target.classList.add('active');
+        }
+
+        // Add smooth scrolling to navigation
+        document.querySelectorAll('.nav-tab').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                showTab(targetId);
+            });
+        });
+
+        // Initialize with overview tab
+        document.addEventListener('DOMContentLoaded', function() {
+            showTab('overview');
+        });
+    </script>
+</body>
+</html>

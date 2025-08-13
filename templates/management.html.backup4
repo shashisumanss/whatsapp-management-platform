@@ -926,8 +926,8 @@
             loadEnhancedDashboardStats();
             loadRecentFlagged();
             loadTickets();
-            loadBulkMessageHistory();
-            loadScheduledMessages();
+            // loadBulkMessageHistory();
+            // loadScheduledMessages();
             loadAnalyticsSummary();
             loadGroups();
             loadGroupOptions();
@@ -955,9 +955,9 @@
             if (sectionName === 'tickets') {
                 loadTickets();
             } else if (sectionName === 'bulk') {
-                loadBulkMessageHistory();
+                // loadBulkMessageHistory();
             } else if (sectionName === 'scheduled') {
-                loadScheduledMessages();
+                // loadScheduledMessages();
             } else if (sectionName === 'groups') {
                 loadGroups();
             } else if (sectionName === 'analytics') {
@@ -1802,7 +1802,7 @@
                 
                 if (result.success) {
                     alert(result.message);
-                    loadScheduledMessages(); // Refresh list
+                    // loadScheduledMessages(); // Refresh list
                     loadEnhancedDashboardStats(); // Update stats
                 } else {
                     alert('Error: ' + result.error);
@@ -2061,10 +2061,10 @@
                 if (result.success) {
                     if (isScheduled) {
                         alert(`✅ Message scheduled successfully!\n\nScheduled for: ${result.scheduled_for}\nScheduled ID: ${result.scheduled_id}`);
-                        loadScheduledMessages(); // Refresh scheduled messages list
+                        // loadScheduledMessages(); // Refresh scheduled messages list
                     } else {
                         alert(result.message);
-                        loadBulkMessageHistory(); // Refresh bulk message history
+                        // loadBulkMessageHistory(); // Refresh bulk message history
                     }
                     
                     // closeBulkMessageModal();
@@ -2150,8 +2150,8 @@
             loadEnhancedDashboardStats();
             loadRecentFlagged();
             loadTickets();
-            loadBulkMessageHistory();
-            loadScheduledMessages();
+            // loadBulkMessageHistory();
+            // loadScheduledMessages();
             loadAnalyticsSummary();
             loadGroups();
             alert('Data refreshed successfully!');
@@ -2183,7 +2183,7 @@
             // Refresh scheduled messages if that section is active
             const scheduledSection = document.getElementById('scheduled');
             if (scheduledSection && scheduledSection.classList.contains('active')) {
-                loadScheduledMessages();
+                // loadScheduledMessages();
             }
         }, 30000);
 
