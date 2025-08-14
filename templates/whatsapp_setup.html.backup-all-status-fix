@@ -127,23 +127,6 @@
         }
         
         .hidden { display: none; }
-
-        .action-btn {
-            margin: 5px;
-            padding: 10px 20px;
-            font-weight: 500;
-        }
-
-        .btn-whatsapp {
-            background-color: #25D366;
-            border-color: #25D366;
-            color: white;
-        }
-
-        .btn-whatsapp:hover {
-            background-color: #1ab852;
-            border-color: #1ab852;
-        }
         
         .loading {
             border: 3px solid #f3f3f3;
@@ -331,22 +314,6 @@
                                 <h6>📱 Quick Setup:</h6>
                                 <ol>
                                     <li>Click "Start WhatsApp Web Connection" below</li>
-                        </button>
-                        <a href="https://web.whatsapp.com" target="_blank" class="btn action-btn btn-outline-success">
-                            <i class="fas fa-external-link-alt me-2"></i>Open WhatsApp Web Directly
-                        </button>
-                        <br><br>
-                        <button class="btn btn-info mt-2" onclick="window.openWhatsAppWithTimer()">
-                            <i class="fas fa-stopwatch me-2"></i>Open WhatsApp + 5 Second Timer
-                        </button>
-                        <div id="simpleTimer" style="display:none; margin-top:10px; padding:10px; background:#e3f2fd; border-radius:5px;">
-                            <strong>Timer Active:</strong> <span id="countdown">5</span> seconds until confirmation...
-                        </div>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="window.testConfirmation()">
-                            <i class="fas fa-bug"></i> Test
-                        </button>
-                        </a>
                                     <li>QR code will appear</li>
                                     <li>Open WhatsApp on your phone</li>
                                     <li>Go to Settings → Linked Devices</li>
@@ -372,23 +339,11 @@
                                     <p class="text-muted">Click "Connect" to generate QR code</p>
                                     <button class="btn btn-success" onclick="startWhatsAppWeb()">
                                         <i class="fas fa-link"></i> Start WhatsApp Web Connection
-                        </button>
-                        <a href="https://web.whatsapp.com" target="_blank" class="btn action-btn btn-outline-success">
-                            <i class="fas fa-external-link-alt me-2"></i>Open WhatsApp Web Directly
-                        </button>
-                        <br><br>
-                        <button class="btn btn-info mt-2" onclick="window.openWhatsAppWithTimer()">
-                            <i class="fas fa-stopwatch me-2"></i>Open WhatsApp + 5 Second Timer
-                        </button>
-                        <div id="simpleTimer" style="display:none; margin-top:10px; padding:10px; background:#e3f2fd; border-radius:5px;">
-                            <strong>Timer Active:</strong> <span id="countdown">5</span> seconds until confirmation...
-                        </div>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="window.testConfirmation()">
-                            <i class="fas fa-bug"></i> Test
-                        </button>
-                        </a>
                                     </button>
+                                    <br><br>
+                                    <a href="https://web.whatsapp.com" target="_blank" class="btn btn-outline-success" onclick="window.open('https://web.whatsapp.com', '_blank'); openWhatsAppDirect(); return false;">
+                                        <i class="fas fa-external-link-alt me-2"></i>Open WhatsApp Web Directly
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -415,81 +370,11 @@
         </div>
     </div>
 
-
-// Simple working function
-function simpleStatusCheck() {
-    console.log("Checking status...");
-    fetch("/api/whatsapp/status")
-    .then(r => r.json())
-    .then(d => {
-        console.log("Got:", d);
-        if (d.connected) {
-            alert("CONNECTED: " + d.message);
-        } else {
-            alert("DISCONNECTED");
-        }
-    });
-}
-
-// Timer function added at end
-function openWhatsAppWithTimer() {
-    console.log("🚀 Timer function called");
-    window.open("https://web.whatsapp.com", "_blank");
-    
-    let count = 5;
-    console.log("⏰ Starting countdown from 5...");
-    
-    const interval = setInterval(function() {
-        console.log("⏰ " + count + " seconds left");
-        count--;
-        
-        if (count < 0) {
-            clearInterval(interval);
-            console.log("⏰ Time up! Showing dialog...");
-            
-            if (confirm("Have you connected to WhatsApp Web? Click OK to register.")) {
-                console.log("✅ User clicked OK");
-                fetch("/api/whatsapp/manual/connect", {method: "POST"})
-                    .then(r => r.json())
-                    .then(data => {
-                        alert(data.success ? "✅ Registered!" : "❌ Failed!");
-                        if (data.success && typeof checkStatus === "function") {
-                            checkStatus();
-                        }
-                    });
-            } else {
-                console.log("❌ User cancelled");
-            }
-        }
-    }, 1000);
-}
-
-// Make it global
-window.openWhatsAppWithTimer = openWhatsAppWithTimer;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let selectedOption = null;
-        let connectionStatus = "disconnected";
+        let connectionStatus = 'disconnected';
         let qrCheckInterval = null;
-
-        // Simple status checker
-        window.checkStatus = function() {
-            fetch("/api/whatsapp/status")
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Status check result:", data);
-                    if (data.connected) {
-                        alert("✅ CONNECTED: " + data.message);
-                        var statusEl = document.getElementById("connectionStatus");
-                        if (statusEl) {
-                            statusEl.innerHTML = "<span class=\"status-indicator status-connected\"></span>" + data.message;
-                        }
-                    } else {
-                        alert("❌ DISCONNECTED");
-                    }
-                });
-        };
-
 
         // Option Selection
         function selectOption(option) {
@@ -647,22 +532,6 @@ window.openWhatsAppWithTimer = openWhatsAppWithTimer;
                     <p class="text-muted">Click "Connect" to generate QR code</p>
                     <button class="btn btn-success" onclick="startWhatsAppWeb()">
                         <i class="fas fa-link"></i> Start WhatsApp Web Connection
-                        </button>
-                        <a href="https://web.whatsapp.com" target="_blank" class="btn action-btn btn-outline-success">
-                            <i class="fas fa-external-link-alt me-2"></i>Open WhatsApp Web Directly
-                        </button>
-                        <br><br>
-                        <button class="btn btn-info mt-2" onclick="window.openWhatsAppWithTimer()">
-                            <i class="fas fa-stopwatch me-2"></i>Open WhatsApp + 5 Second Timer
-                        </button>
-                        <div id="simpleTimer" style="display:none; margin-top:10px; padding:10px; background:#e3f2fd; border-radius:5px;">
-                            <strong>Timer Active:</strong> <span id="countdown">5</span> seconds until confirmation...
-                        </div>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="window.testConfirmation()">
-                            <i class="fas fa-bug"></i> Test
-                        </button>
-                        </a>
                     </button>
                 `;
                 
@@ -722,12 +591,14 @@ window.openWhatsAppWithTimer = openWhatsAppWithTimer;
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
+            updateConnectionStatus();
+            setInterval(updateConnectionStatus, 5000);
             checkCurrentStatus();
         });
 
         async function checkCurrentStatus() {
             try {
-                const response = await fetch('/api/whatsapp/status');
+                const response = await fetch('/api/whatsapp/web-status');
                 const result = await response.json();
                 
                 if (result.connected) {
@@ -739,57 +610,89 @@ window.openWhatsAppWithTimer = openWhatsAppWithTimer;
                 console.log('No existing connection found');
             }
         }
-
-// Simple working function
-function simpleStatusCheck() {
-    console.log("Checking status...");
-    fetch("/api/whatsapp/status")
-    .then(r => r.json())
-    .then(d => {
-        console.log("Got:", d);
-        if (d.connected) {
-            alert("CONNECTED: " + d.message);
-        } else {
-            alert("DISCONNECTED");
-        }
-    });
-}
-
-// Timer function added at end
-function openWhatsAppWithTimer() {
-    console.log("🚀 Timer function called");
-    window.open("https://web.whatsapp.com", "_blank");
-    
-    let count = 5;
-    console.log("⏰ Starting countdown from 5...");
-    
-    const interval = setInterval(function() {
-        console.log("⏰ " + count + " seconds left");
-        count--;
         
-        if (count < 0) {
-            clearInterval(interval);
-            console.log("⏰ Time up! Showing dialog...");
+        function checkConnectionStatus() {
+            fetch("/api/whatsapp/web-status")
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById("simpleStatus");
+                    const statusText = document.getElementById("simpleStatusText");
+                    
+                    if (statusDiv && statusText) {
+                        if (data.connected) {
+                            statusDiv.className = "alert alert-success text-center mb-4";
+                            statusText.textContent = "Connected via Manual WhatsApp Web";
+                        } else {
+                            statusDiv.className = "alert alert-warning text-center mb-4";
+                            statusText.textContent = "Not Connected";
+                        }
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("simpleStatusText").textContent = "Error checking status";
+                });
+        }
+        
+        // Auto-check status
+        document.addEventListener("DOMContentLoaded", function() {
+            checkConnectionStatus();
+            setInterval(checkConnectionStatus, 5000);
+        });
+        
+
+        function openWhatsAppDirect() {
+            console.log("Button clicked - starting 3 second timer");
+            setTimeout(() => {
+                console.log("3 seconds passed - showing popup");
+                if (confirm("Have you successfully connected to WhatsApp Web? Click OK to register the connection.")) {
+                    fetch("/api/whatsapp/manual/connect", { method: "POST" })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert("Connection registered successfully!");
+                                setTimeout(checkConnectionStatus, 1000);
+                            }
+                        })
+                        .catch(error => console.error("Error:", error));
+                }
+            }, 3000);
+        }
+        // Dynamic status display
+        document.addEventListener("DOMContentLoaded", function() {
+            const statusDiv = document.createElement("div");
+            statusDiv.id = "dynamicStatus";
+            statusDiv.className = "alert alert-warning text-center";
+            statusDiv.style.margin = "20px 0";
+            statusDiv.innerHTML = "<strong>Status:</strong> <span id=\"dynamicStatusText\">Checking...</span>";
             
-            if (confirm("Have you connected to WhatsApp Web? Click OK to register.")) {
-                console.log("✅ User clicked OK");
-                fetch("/api/whatsapp/manual/connect", {method: "POST"})
+            const title = document.querySelector("h1");
+            if (title) {
+                title.parentNode.insertBefore(statusDiv, title.nextSibling);
+            }
+            
+            function checkStatus() {
+                fetch("/api/whatsapp/web-status")
                     .then(r => r.json())
                     .then(data => {
-                        alert(data.success ? "✅ Registered!" : "❌ Failed!");
-                        if (data.success && typeof checkStatus === "function") {
-                            checkStatus();
+                        const statusDiv = document.getElementById("dynamicStatus");
+                        const statusText = document.getElementById("dynamicStatusText");
+                        
+                        if (data.connected) {
+                            statusDiv.className = "alert alert-success text-center";
+                            statusText.textContent = "Connected";
+                        } else {
+                            statusDiv.className = "alert alert-warning text-center";
+                            statusText.textContent = "Disconnected";
                         }
+                    })
+                    .catch(() => {
+                        document.getElementById("dynamicStatusText").textContent = "Error";
                     });
-            } else {
-                console.log("❌ User cancelled");
             }
-        }
-    }, 1000);
-}
-
-// Make it global
-window.openWhatsAppWithTimer = openWhatsAppWithTimer;
+            
+            checkStatus();
+            setInterval(checkStatus, 5000);
+        });
     </script>
 </body>
 </html>

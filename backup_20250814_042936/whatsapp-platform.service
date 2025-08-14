@@ -1,0 +1,18 @@
+[Unit]
+Description=WhatsApp Management Platform
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/whatsapp-management-platform
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
+Environment=CHROME_BIN=/usr/bin/google-chrome
+Environment=PYTHONPATH=/root/whatsapp-management-platform
+ExecStart=/root/whatsapp-management-platform/venv/bin/python app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
