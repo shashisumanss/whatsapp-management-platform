@@ -416,63 +416,12 @@
     </div>
 
 
-// Simple working function
-function simpleStatusCheck() {
-    console.log("Checking status...");
-    fetch("/api/whatsapp/status")
-    .then(r => r.json())
-    .then(d => {
-        console.log("Got:", d);
-        if (d.connected) {
-            alert("CONNECTED: " + d.message);
-        } else {
-            alert("DISCONNECTED");
-        }
-    });
-}
-
-// Timer function added at end
-function openWhatsAppWithTimer() {
-    console.log("🚀 Timer function called");
-    window.open("https://web.whatsapp.com", "_blank");
-    
-    let count = 5;
-    console.log("⏰ Starting countdown from 5...");
-    
-    const interval = setInterval(function() {
-        console.log("⏰ " + count + " seconds left");
-        count--;
-        
-        if (count < 0) {
-            clearInterval(interval);
-            console.log("⏰ Time up! Showing dialog...");
-            
-            if (confirm("Have you connected to WhatsApp Web? Click OK to register.")) {
-                console.log("✅ User clicked OK");
-                fetch("/api/whatsapp/manual/connect", {method: "POST"})
-                    .then(r => r.json())
-                    .then(data => {
-                        alert(data.success ? "✅ Registered!" : "❌ Failed!");
-                        if (data.success && typeof checkStatus === "function") {
-                            checkStatus();
-                        }
-                    });
-            } else {
-                console.log("❌ User cancelled");
-            }
-        }
-    }, 1000);
-}
-
-// Make it global
-window.openWhatsAppWithTimer = openWhatsAppWithTimer;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let selectedOption = null;
         let connectionStatus = "disconnected";
         let qrCheckInterval = null;
 
-        // Simple status checker
         window.checkStatus = function() {
             fetch("/api/whatsapp/status")
                 .then(response => response.json())
@@ -755,7 +704,6 @@ function simpleStatusCheck() {
     });
 }
 
-// Timer function added at end
 function openWhatsAppWithTimer() {
     console.log("🚀 Timer function called");
     window.open("https://web.whatsapp.com", "_blank");
@@ -788,7 +736,6 @@ function openWhatsAppWithTimer() {
     }, 1000);
 }
 
-// Make it global
 window.openWhatsAppWithTimer = openWhatsAppWithTimer;
     </script>
 </body>
