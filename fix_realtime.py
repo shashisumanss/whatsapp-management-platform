@@ -1,0 +1,334 @@
+#!/usr/bin/env python3
+"""
+Script to fix the real-time dashboard template
+Run this from your project root directory
+"""
+
+import os
+import shutil
+from datetime import datetime
+
+def create_backup(file_path):
+    """Create a backup of the original file"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = f"{file_path}.backup_{timestamp}"
+    if os.path.exists(file_path):
+        shutil.copy2(file_path, backup_path)
+        print(f"✅ Backup created: {backup_path}")
+        return backup_path
+    return None
+
+def write_fixed_template():
+    """Write the fixed real-time template"""
+    
+    fixed_template = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Real-time Monitoring</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6">⚡ Real-time Monitoring</h1>
+        
+        <!-- Connection Status -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+            <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full mr-2 bg-red-500" id="connection-indicator"></div>
+                <span id="connection-status">Connecting...</span>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <p class="text-gray-600 mb-4">Real-time WhatsApp message monitoring and analytics</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-4 rounded">
+                    <h3 class="font-semibold text-blue-800">Live Messages</h3>
+                    <p class="text-2xl font-bold text-blue-600" id="live-count">0</p>
+                </div>
+                <div class="bg-red-50 p-4 rounded">
+                    <h3 class="font-semibold text-red-800">Threats Detected</h3>
+                    <p class="text-2xl font-bold text-red-600" id="threat-count">0</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded">
+                    <h3 class="font-semibold text-green-800">Active Groups</h3>
+                    <p class="text-2xl font-bold text-green-600" id="group-count">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Feed -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">📱 Live Messages</h2>
+            <div id="messages-feed" class="h-64 overflow-y-auto border border-gray-200 rounded p-4 bg-gray-50">
+                <div class="text-gray-500 text-center" id="waiting-message">Waiting for messages...</div>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <a href="/management" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Back to Management
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('"'"'Real-time monitoring page loaded - FIXED VERSION'"'"');
+        
+        // Initialize counters
+        let messageCount = 0;
+        let threatCount = 0;
+        let activeGroups = new Set();
+        
+        // Test elements exist
+        console.log('"'"'connection-status element:'"'"', document.getElementById('"'"'connection-status'"'"'));
+        console.log('"'"'connection-indicator element:'"'"', document.getElementById('"'"'connection-indicator'"'"'));
+        
+        // Connect to Socket.IO with proper configuration
+        console.log('"'"'Connecting to WebSocket...'"'"');
+        const socket = io({
+            transports: ['"'"'websocket'"'"', '"'"'polling'"'"'],
+            timeout: 5000,
+            reconnection: true,
+            reconnectionDelay: 2000,
+            reconnectionAttempts: 5
+        });
+        
+        socket.on('"'"'connect'"'"', function() {
+            console.log('"'"'✅ WebSocket Connected via nginx'"'"');
+            updateConnectionStatus(true);
+        });
+        
+        socket.on('"'"'disconnect'"'"', function() {
+            console.log('"'"'❌ WebSocket Disconnected'"'"');
+            updateConnectionStatus(false);
+        });
+        
+        socket.on('"'"'connect_error'"'"', function(error) {
+            console.error('"'"'WebSocket Connection Error:'"'"', error);
+            updateConnectionStatus(false, '"'"'Connection Failed: '"'"' + error.message);
+        });
+
+        // Listen for messages with proper error handling
+        socket.on('"'"'new_message'"'"', function(data) {
+            console.log('"'"'📱 New message received:'"'"', data);
+            try {
+                handleNewMessage(data);
+            } catch (error) {
+                console.error('"'"'Error handling message:'"'"', error);
+            }
+        });
+
+        // Additional event listeners for different message types
+        socket.on('"'"'message'"'"', function(data) {
+            console.log('"'"'📱 Generic message received:'"'"', data);
+            handleNewMessage(data);
+        });
+
+        socket.on('"'"'whatsapp_message'"'"', function(data) {
+            console.log('"'"'📱 WhatsApp message received:'"'"', data);
+            handleNewMessage(data);
+        });
+
+        function updateConnectionStatus(connected, customMessage = null) {
+            const indicator = document.getElementById('"'"'connection-indicator'"'"');
+            const status = document.getElementById('"'"'connection-status'"'"');
+            
+            if (connected) {
+                indicator.className = '"'"'w-3 h-3 rounded-full mr-2 bg-green-500'"'"';
+                status.textContent = '"'"'Connected to Real-time Monitoring'"'"';
+            } else {
+                indicator.className = '"'"'w-3 h-3 rounded-full mr-2 bg-red-500'"'"';
+                status.textContent = customMessage || '"'"'Disconnected'"'"';
+            }
+        }
+
+        function handleNewMessage(data) {
+            // Handle both object and string data
+            let message;
+            if (typeof data === '"'"'string'"'"') {
+                try {
+                    message = JSON.parse(data);
+                } catch (e) {
+                    // If parsing fails, create a simple message object
+                    message = {
+                        text: data,
+                        sender: '"'"'Unknown'"'"',
+                        timestamp: new Date().toISOString(),
+                        type: '"'"'text'"'"'
+                    };
+                }
+            } else {
+                message = data;
+            }
+
+            // Extract text content
+            const messageText = message.text || message.content || message.message || '"'"'No content'"'"';
+            const sender = message.sender || message.from || message.author || '"'"'Unknown'"'"';
+            const timestamp = message.timestamp || new Date().toISOString();
+            const group = message.group || message.chat || message.groupName;
+
+            console.log('"'"'Processing message:'"'"', { messageText, sender, timestamp, group });
+
+            // Update counters
+            messageCount++;
+            updateCounter('"'"'live-count'"'"', messageCount);
+
+            // Check for threats
+            if (isThreatMessage(messageText, message)) {
+                threatCount++;
+                updateCounter('"'"'threat-count'"'"', threatCount);
+            }
+
+            // Track active groups
+            if (group) {
+                activeGroups.add(group);
+                updateCounter('"'"'group-count'"'"', activeGroups.size);
+            }
+
+            // Display message in feed
+            displayMessage(messageText, sender, timestamp, group, message);
+        }
+
+        function isThreatMessage(text, messageObj) {
+            const threatKeywords = [
+                '"'"'threat'"'"', '"'"'violence'"'"', '"'"'attack'"'"', '"'"'kill'"'"', '"'"'bomb'"'"', '"'"'terrorist'"'"',
+                '"'"'urgent'"'"', '"'"'emergency'"'"', '"'"'critical'"'"', '"'"'danger'"'"', '"'"'warning'"'"',
+                '"'"'help'"'"', '"'"'police'"'"', '"'"'ambulance'"'"', '"'"'fire'"'"'
+            ];
+            
+            const lowerText = text.toLowerCase();
+            const hasKeyword = threatKeywords.some(keyword => lowerText.includes(keyword));
+            const isCritical = messageObj.priority === '"'"'CRITICAL'"'"' || messageObj.flagged === true;
+            
+            return hasKeyword || isCritical;
+        }
+
+        function updateCounter(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = value;
+                // Add a brief animation
+                element.style.transform = '"'"'scale(1.1)'"'"';
+                setTimeout(() => {
+                    element.style.transform = '"'"'scale(1)'"'"';
+                }, 200);
+            }
+        }
+
+        function displayMessage(text, sender, timestamp, group, fullMessage) {
+            const feed = document.getElementById('"'"'messages-feed'"'"');
+            const waitingMessage = document.getElementById('"'"'waiting-message'"'"');
+            
+            // Remove waiting message on first real message
+            if (waitingMessage) {
+                waitingMessage.remove();
+            }
+
+            // Format timestamp
+            const time = new Date(timestamp).toLocaleTimeString();
+            
+            // Determine message style based on content
+            const isThreat = isThreatMessage(text, fullMessage);
+            const messageClass = isThreat ? '"'"'border-red-200 bg-red-50'"'"' : '"'"'border-gray-200 bg-white'"'"';
+            const icon = isThreat ? '"'"'🚨'"'"' : '"'"'💬'"'"';
+            
+            // Create message element
+            const messageDiv = document.createElement('"'"'div'"'"');
+            messageDiv.className = `mb-3 p-3 border rounded-lg ${messageClass}`;
+            messageDiv.innerHTML = `
+                <div class="flex justify-between items-start mb-1">
+                    <span class="font-semibold text-sm text-gray-700">${icon} ${sender}</span>
+                    <span class="text-xs text-gray-500">${time}</span>
+                </div>
+                ${group ? `<div class="text-xs text-blue-600 mb-1">📱 ${group}</div>` : '"'"''"'"'}
+                <div class="text-gray-800">${escapeHtml(text)}</div>
+                ${isThreat ? '"'"'<div class="text-xs text-red-600 mt-1">⚠️ Flagged as potential threat</div>'"'"' : '"'"''"'"'}
+            `;
+            
+            // Add to top of feed
+            feed.insertBefore(messageDiv, feed.firstChild);
+            
+            // Limit to 50 messages for performance
+            const messages = feed.children;
+            if (messages.length > 50) {
+                feed.removeChild(messages[messages.length - 1]);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('"'"'div'"'"');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Test message function for debugging
+        window.testMessage = function() {
+            const testData = {
+                id: '"'"'test_'"'"' + Date.now(),
+                text: '"'"'🎉 Test message from JavaScript console!'"'"',
+                sender: '"'"'Console Tester'"'"',
+                timestamp: new Date().toISOString(),
+                type: '"'"'test'"'"'
+            };
+            handleNewMessage(testData);
+        };
+
+        console.log('"'"'✅ Real-time dashboard initialized. Test with: testMessage()'"'"');
+    </script>
+</body>
+</html>'''
+    
+    return fixed_template
+
+def main():
+    """Main function to fix the real-time template"""
+    
+    # Check if we're in the right directory
+    template_path = "templates/realtime.html"
+    
+    if not os.path.exists("templates"):
+        print("❌ Error: 'templates' directory not found.")
+        print("Make sure you're running this script from your project root directory.")
+        return False
+    
+    if not os.path.exists(template_path):
+        print(f"❌ Error: {template_path} not found.")
+        return False
+    
+    print("🔧 Starting real-time template fix...")
+    
+    # Create backup
+    backup_path = create_backup(template_path)
+    
+    try:
+        # Write the fixed template
+        with open(template_path, 'w', encoding='utf-8') as f:
+            f.write(write_fixed_template())
+        
+        print(f"✅ Successfully updated {template_path}")
+        print("\n🚀 Next steps:")
+        print("1. Restart your Flask application:")
+        print("   sudo systemctl restart your-app  # or however you restart")
+        print("2. Refresh the real-time dashboard page")
+        print("3. Check browser console for 'FIXED VERSION' message")
+        print("4. Test with: testMessage() in browser console")
+        
+        if backup_path:
+            print(f"\n💾 Original backed up to: {backup_path}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error writing file: {e}")
+        if backup_path and os.path.exists(backup_path):
+            print(f"Restoring from backup: {backup_path}")
+            shutil.copy2(backup_path, template_path)
+        return False
+
+if __name__ == "__main__":
+    success = main()
+    exit(0 if success else 1)

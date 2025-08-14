@@ -1,0 +1,164 @@
+require('dotenv').config();
+
+class WhatsAppAPI {
+  constructor() {
+    this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    this.accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    this.apiVersion = process.env.WHATSAPP_API_VERSION || 'v18.0';
+    this.baseUrl = `https://graph.facebook.com/${this.apiVersion}`;
+    this.validateCredentials();
+  }
+
+  validateCredentials() {
+    if (!this.phoneNumberId || !this.accessToken) {
+      throw new Error('Missing required WhatsApp API credentials in .env file');
+    }
+    console.log('✅ WhatsApp API credentials loaded successfully');
+  }
+
+  async testConnection() {
+    try {
+      const response = await fetch(`${this.baseUrl}/${this.phoneNumberId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log('✅ WhatsApp API connection successful');
+        return { success: true, data };
+      } else {
+        console.error('❌ WhatsApp API connection failed:', data);
+        return { success: false, error: data };
+      }
+    } catch (error) {
+      console.error('❌ WhatsApp API connection error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendMessage(to, message, priority = 'normal') {
+    try {
+      const payload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: to.replace(/\D/g, ''),
+        type: "text",
+        text: { body: message }
+      };
+
+      const response = await fetch(`${this.baseUrl}/${this.phoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        return {
+          success: true,
+          messageId: data.messages[0].id,
+          to: to,
+          status: 'sent',
+          timestamp: new Date().toISOString(),
+          priority
+        };
+      } else {
+        return {
+          success: false,
+          error: data.error?.message || 'Unknown error',
+          to: to,
+          status: 'failed',
+          timestamp: new Date().toISOString()
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        to: to,
+        status: 'error',
+        timestamp: new Date().toISOString()
+      };
+    }
+  }
+
+  async sendBulkMessages(recipients, message, options = {}) {
+    const { delayMs = 1500, batchSize = 5, priority = 'normal' } = options;
+    const results = [];
+    const batches = this.chunkArray(recipients, batchSize);
+
+    console.log(`📤 Starting bulk message send to ${recipients.length} recipients`);
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+
+      const batchPromises = batch.map(async (recipient, index) => {
+        await this.delay(index * (delayMs / batchSize));
+        const phone = typeof recipient === 'string' ? recipient : recipient.phone_number;
+        return this.sendMessage(phone, message, priority);
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+
+      if (i < batches.length - 1) {
+        await this.delay(delayMs);
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    return {
+      total: recipients.length,
+      successful: successCount,
+      failed: failureCount,
+      results: results,
+      summary: {
+        successRate: ((successCount / recipients.length) * 100).toFixed(2) + '%',
+        completedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  chunkArray(array, size) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
+
+  formatPhoneNumber(phone, countryCode = '91') {
+    const cleaned = phone.replace(/\D/g, '');
+    if (!cleaned.startsWith(countryCode)) {
+      return `${countryCode}${cleaned}`;
+    }
+    return cleaned;
+  }
+
+  isValidPhoneNumber(phone) {
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length >= 10 && cleaned.length <= 15;
+  }
+}
+
+const whatsappAPI = new WhatsAppAPI();
+
+module.exports = {
+  WhatsAppAPI,
+  whatsappAPI
+};

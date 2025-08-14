@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Monitoring</title>
+    <title>⚡ Real-time Monitoring</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body class="bg-gray-50">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6">Real-time Monitoring</h1>
+        <h1 class="text-3xl font-bold mb-6">⚡ Real-time Monitoring</h1>
         
         <!-- Connection Status -->
         <div class="bg-white rounded-lg shadow p-4 mb-6">
@@ -39,7 +39,7 @@
 
         <!-- Messages Feed -->
         <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-xl font-bold mb-4">Live Messages</h2>
+            <h2 class="text-xl font-bold mb-4">📱 Live Messages</h2>
             <div id="messages-feed" class="h-64 overflow-y-auto border border-gray-200 rounded p-4">
                 <div class="text-gray-500 text-center">Waiting for messages...</div>
             </div>
@@ -53,22 +53,24 @@
     </div>
 
     <script>
-        console.log('Real-time monitoring page loaded - CLEAN VERSION');
+        console.log('Real-time monitoring page loaded - NEW VERSION');
         
+        // Test elements exist
         console.log('connection-status element:', document.getElementById('connection-status'));
         console.log('connection-indicator element:', document.getElementById('connection-indicator'));
         
+        // Connect to Socket.IO
         console.log('Connecting to WebSocket...');
         const socket = io('http://165.227.39.216');
         
         socket.on('connect', function() {
-            console.log('WebSocket Connected via nginx');
+            console.log('✅ WebSocket Connected via nginx');
             document.getElementById('connection-indicator').className = 'w-3 h-3 rounded-full mr-2 bg-green-500';
             document.getElementById('connection-status').textContent = 'Connected to Real-time Monitoring';
         });
         
         socket.on('disconnect', function() {
-            console.log('WebSocket Disconnected');
+            console.log('❌ WebSocket Disconnected');
             document.getElementById('connection-indicator').className = 'w-3 h-3 rounded-full mr-2 bg-red-500';
             document.getElementById('connection-status').textContent = 'Disconnected';
         });
@@ -78,10 +80,11 @@
             document.getElementById('connection-status').textContent = 'Connection Failed: ' + error;
         });
 
+        // Listen for messages
         socket.on('new_message', function(data) {
-            console.log('New message received:', data);
+            console.log('📱 New message received:', data);
             const feed = document.getElementById('messages-feed');
-            feed.innerHTML = '<div class="text-green-600">Message: ' + data.text + ' (from: ' + data.sender + ')</div>' + feed.innerHTML;
+            feed.innerHTML = '<div class="text-green-600">📱 ' + data.text + ' (from: ' + data.sender + ') + '</div>' + feed.innerHTML;
         });
     </script>
 </body>
