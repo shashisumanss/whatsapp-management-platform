@@ -883,7 +883,7 @@ def handle_disconnect():
     print("❌ Client disconnected")
 
 def broadcast_whatsapp_message(message_data):
-    socketio.emit("new_message", realtime_message)
+    socketio.emit("new_message", message)
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -1151,6 +1151,21 @@ def flag_message_api():
             return jsonify({'error': 'No message provided'}), 400
         
         result = analyzer.content_flagger.flag_content(message)
+
+        # Store the flagged message if it's actually flagged
+        if result.get('is_flagged', False):
+            flagged_entry = {
+                'message': message,
+                'result': result,
+                'timestamp': datetime.now().isoformat(),
+                'sender': data.get('sender', 'Unknown'),
+                'group': data.get('group', 'Unknown'),
+                'id': f"flagged_{int(datetime.now().timestamp())}"
+            }
+            analyzer.flagged_messages.append(flagged_entry)
+            
+            # Also emit to real-time dashboard
+            socketio.emit("flagged_message", flagged_entry)
         
         return jsonify(result)
         
@@ -3429,7 +3444,7 @@ def test_emit():
     logger.info(f"🧪 Emitting test message to all clients: {test_message}")
     
     # Broadcast to all connected clients
-    socketio.emit("new_message", realtime_message)
+    socketio.emit("new_message", message)
     
     return jsonify({
         'status': 'success',
@@ -3549,7 +3564,7 @@ def process_whatsapp_message(webhook_data):
                     }
                     
                     logger.info(f"📡 Broadcasting message to real-time clients: {json.dumps(realtime_message, indent=2)}")
-                    socketio.emit("new_message", realtime_message)
+                    socketio.emit("new_message", message)
                     
                     logger.info(f"✅ Message {message_data['id']} processed and broadcasted successfully")
                     
@@ -3623,7 +3638,7 @@ def working_emit():
         }
         
         # Try to emit the message
-        socketio.emit("new_message", realtime_message)
+        socketio.emit("new_message", message)
         
         return jsonify({
             'status': 'success',
@@ -3686,7 +3701,7 @@ def corrected_emit():
     
     try:
         # Use correct Flask-SocketIO syntax
-        socketio.emit("new_message", realtime_message)
+        socketio.emit("new_message", message)
         return jsonify({
             'status': 'success',
             'message': 'Corrected emit successful',
@@ -3768,7 +3783,7 @@ def force_broadcast():
         print(f"📢 Force broadcasting: {message}")
         
         # Method 1: Use broadcast=True explicitly
-        socketio.emit("new_message", realtime_message)
+        socketio.emit("new_message", message)
         
         # Method 2: Use server.emit
         socketio.server.emit('new_message', message)

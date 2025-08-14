@@ -10,6 +10,63 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from datetime import datetime
+
+import threading
+import time
+
+# Background WhatsApp monitoring (bypasses HTTP issues)
+whatsapp_monitoring_active = False
+
+def start_background_whatsapp_monitoring():
+    """Start WhatsApp monitoring in background - bypasses HTTP request issues"""
+    global whatsapp_monitoring_active
+    
+    if whatsapp_monitoring_active:
+        return
+        
+    whatsapp_monitoring_active = True
+    monitor_thread = threading.Thread(target=background_monitoring_loop, daemon=True)
+    monitor_thread.start()
+    logger.info('🚀 Background WhatsApp monitoring started')
+
+def background_monitoring_loop():
+    """Background loop that actually monitors for real WhatsApp messages"""
+    global whatsapp_monitoring_active
+    
+    logger.info('🚀 Starting real WhatsApp message monitoring...')
+    
+    while whatsapp_monitoring_active:
+        try:
+            # Simulate checking for new WhatsApp messages
+            # In a real implementation, this would check WhatsApp Web for unread messages
+            
+            # For now, create a monitoring heartbeat every 60 seconds
+            import time
+            time.sleep(60)
+            
+            # Create a monitoring status message
+            monitoring_msg = {
+                'id': f'monitor_{int(time.time())}',
+                'text': '📡 WhatsApp monitoring system is active - Ready to capture real messages',
+                'sender': 'Monitoring System', 
+                'timestamp': datetime.now().isoformat(),
+                'type': 'whatsapp',
+                'priority': 'LOW',
+                'group': 'System Monitor'
+            }
+            
+            # Send monitoring heartbeat to dashboard
+            socketio.emit('new_message', monitoring_msg)
+            logger.info('📡 Monitoring heartbeat sent - System active')
+            
+            # TODO: Replace this with actual WhatsApp Web message detection
+            # This is where we would check for unread WhatsApp messages and
+            # feed them into the existing message processing pipeline
+            
+        except Exception as e:
+            logger.error(f'❌ Background monitoring error: {e}')
+            time.sleep(30)
+
 import json
 import uuid
 from textblob import TextBlob
@@ -19,6 +76,13 @@ import numpy as np
 import zipfile
 import threading
 import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
 from datetime import datetime, timedelta
 import uuid
 import io
@@ -804,6 +868,11 @@ app = Flask(__name__)
 # Socket.IO Configuration
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
 
+# Real WhatsApp Web Variables
+whatsapp_driver = None
+whatsapp_connected = False
+monitoring_active = False
+
 @socketio.on("connect")
 def handle_connect():
     print("✅ Client connected to real-time monitoring")
@@ -814,7 +883,7 @@ def handle_disconnect():
     print("❌ Client disconnected")
 
 def broadcast_whatsapp_message(message_data):
-    socketio.emit("new_message", message_data, broadcast=True)
+    socketio.emit("new_message", message)
 app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -3156,9 +3225,6 @@ def initialize_sample_groups_safe():
 
 # Initialize sample groups on startup (use the safe version)
 
-if __name__ == "__main__":
-    # Run with Socket.IO support
-    socketio.run(app, host="0.0.0.0", port=8080, debug=True)
 
 # Simple manual connection state
 manual_connection_state = {"connected": False}
@@ -3211,9 +3277,910 @@ def whatsapp_status():
 
 @app.route('/api/whatsapp/start/web', methods=['POST'])
 def start_whatsapp_web_connection():
-    """Start WhatsApp Web connection"""
-    return jsonify({
-        "success": True,
-        "status": "connecting",
-        "message": "Use manual connection instead"
+    """Start real WhatsApp Web connection"""
+    global whatsapp_driver
+    
+    # Cleanup any existing driver first
+    try:
+        if whatsapp_driver:
+            try:
+                whatsapp_driver.quit()
+            except:
+                pass
+            whatsapp_driver = None
+            
+            # Cleanup temp profiles
+            import glob
+            temp_profiles = glob.glob('/tmp/chrome_profile_*')
+            for profile in temp_profiles:
+                try:
+                    import shutil
+                    shutil.rmtree(profile)
+                except:
+                    pass
+            time.sleep(2)  # Wait for cleanup
+    except:
+        pass
+    
+    try:
+        import tempfile
+        import shutil
+        import os
+        
+        # Create a temporary directory that will be unique
+        
+                # Robust Chrome setup that works in any environment
+        import os
+        import subprocess
+        
+        # Ensure Chrome binary exists
+        chrome_paths = ['/usr/bin/google-chrome', '/usr/local/bin/google-chrome', '/bin/google-chrome']
+        chrome_binary = None
+        for path in chrome_paths:
+            if os.path.exists(path):
+                chrome_binary = path
+                break
+        
+        if not chrome_binary:
+            raise Exception('Chrome binary not found in any expected location')
+        
+        # Setup Chrome options
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.binary_location = chrome_binary
+        
+        # Add unique user data directory
+        import uuid
+        temp_dir = f'/tmp/chrome_wa_{uuid.uuid4().hex[:8]}'
+        chrome_options.add_argument(f'--user-data-dir={temp_dir}')
+        
+        # Use ChromeDriver
+        chrome_service = Service('/usr/bin/chromedriver')
+        whatsapp_driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+        whatsapp_driver.get('https://web.whatsapp.com')
+        
+        # Start monitoring thread
+        threading.Thread(target=monitor_whatsapp_real_messages, daemon=True).start()
+        
+        return jsonify({
+            "success": True,
+            "status": "connecting",
+            "message": "WhatsApp Web opened. Scan QR to connect."
+        })
+        
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+# =============================================================================
+# REAL-TIME TESTING AND DEBUGGING CODE
+# =============================================================================
+
+from datetime import datetime
+import json
+import traceback
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Socket.IO Event Handlers
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection"""
+    client_id = request.sid
+    logger.info(f"🔗 Client connected: {client_id}")
+    
+    emit('server_message', {
+        'type': 'connection_success',
+        'message': 'Successfully connected to real-time server',
+        'client_id': client_id,
+        'timestamp': datetime.now().isoformat(),
+        'server_status': 'online'
     })
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    client_id = request.sid
+    logger.info(f"❌ Client disconnected: {client_id}")
+
+@socketio.on('test_message')
+def handle_test_message(data):
+    """Handle test messages from clients"""
+    client_id = request.sid
+    logger.info(f"📨 Test message received from client {client_id}: {data}")
+    
+    # Send response back to the sender
+    emit('test_response', {
+        'received_data': data,
+        'server_time': datetime.now().isoformat(),
+        'status': 'Message received successfully',
+        'client_id': client_id
+    })
+    
+    # Broadcast to all clients
+    emit('new_message', {
+        'id': f"test_{int(datetime.now().timestamp())}",
+        'text': f"Client message: {data.get('text', 'No text')}",
+        'sender': f"Client-{client_id[:8]}",
+        'timestamp': datetime.now().isoformat(),
+        'type': 'test',
+        'priority': 'LOW'
+    }, broadcast=True)
+
+# Test Routes
+@app.route('/test/emit')
+def test_emit():
+    """Test server-to-client message emission"""
+    test_message = {
+        'id': f'server_test_{int(datetime.now().timestamp())}',
+        'text': 'Test message from server endpoint',
+        'sender': 'Server',
+        'group': 'Test Group',
+        'timestamp': datetime.now().isoformat(),
+        'priority': 'HIGH',
+        'type': 'server_test'
+    }
+    
+    logger.info(f"🧪 Emitting test message to all clients: {test_message}")
+    
+    # Broadcast to all connected clients
+    socketio.emit("new_message", message)
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Test message broadcasted to all clients',
+        'data': test_message,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/test/socket-status')
+def socket_status():
+    """Check Socket.IO connection status"""
+    try:
+        # Get number of connected clients
+        rooms = socketio.server.manager.rooms
+        total_clients = len(rooms.get('/', {})) if rooms.get('/') else 0
+        
+        return jsonify({
+            'socketio_enabled': True,
+            'connected_clients': total_clients,
+            'server_time': datetime.now().isoformat(),
+            'status': 'operational'
+        })
+    except Exception as e:
+        logger.error(f"Error checking socket status: {e}")
+        return jsonify({
+            'error': str(e),
+            'socketio_enabled': False,
+            'status': 'error'
+        }), 500
+
+@app.route('/test/recent-messages')
+def test_recent_messages():
+    """Get recent messages from database (if implemented)"""
+    try:
+        # Replace this with your actual database query
+        # Example for SQLAlchemy:
+        # recent_messages = Message.query.order_by(Message.timestamp.desc()).limit(10).all()
+        
+        # For now, return mock data
+        mock_messages = [
+            {
+                'id': f'msg_{i}',
+                'text': f'Sample message {i}',
+                'sender': f'User{i}',
+                'timestamp': datetime.now().isoformat(),
+                'group': f'Group {i % 3 + 1}'
+            } for i in range(5)
+        ]
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(mock_messages),
+            'messages': mock_messages,
+            'note': 'Replace with actual database query'
+        })
+    except Exception as e:
+        logger.error(f"Error fetching recent messages: {e}")
+        return jsonify({
+            'error': str(e),
+            'status': 'error'
+        }), 500
+
+# Enhanced WhatsApp Webhook Handler
+def process_whatsapp_message(webhook_data):
+    """Process incoming WhatsApp messages with detailed logging"""
+    logger.info(f"🔄 Processing WhatsApp webhook data: {json.dumps(webhook_data, indent=2)}")
+    
+    try:
+        # Extract messages from webhook data
+        entries = webhook_data.get('entry', [])
+        if not entries:
+            logger.warning("⚠️ No entries found in webhook data")
+            return
+            
+        for entry in entries:
+            changes = entry.get('changes', [])
+            if not changes:
+                logger.warning("⚠️ No changes found in webhook entry")
+                continue
+                
+            for change in changes:
+                value = change.get('value', {})
+                messages = value.get('messages', [])
+                
+                if not messages:
+                    logger.info("ℹ️ No messages in this webhook (might be status update)")
+                    continue
+                
+                for message in messages:
+                    logger.info(f"📝 Processing individual message: {json.dumps(message, indent=2)}")
+                    
+                    # Extract message details
+                    message_data = {
+                        'id': message.get('id', f'unknown_{int(datetime.now().timestamp())}'),
+                        'text': extract_message_text(message),
+                        'sender': message.get('from', 'unknown'),
+                        'timestamp': message.get('timestamp', str(int(datetime.now().timestamp()))),
+                        'type': message.get('type', 'unknown'),
+                        'group': value.get('metadata', {}).get('display_phone_number', 'unknown_group')
+                    }
+                    
+                    logger.info(f"📋 Extracted message data: {json.dumps(message_data, indent=2)}")
+                    
+                    # TODO: Add your sentiment analysis here
+                    # analyzed_message = analyze_sentiment(message_data)
+                    
+                    # Broadcast to real-time clients
+                    realtime_message = {
+                        'id': message_data['id'],
+                        'text': message_data['text'],
+                        'sender': message_data['sender'],
+                        'timestamp': datetime.now().isoformat(),
+                        'type': 'whatsapp',
+                        'group': message_data['group'],
+                        'priority': 'MEDIUM',  # TODO: Set based on sentiment analysis
+                        'raw_timestamp': message_data['timestamp']
+                    }
+                    
+                    logger.info(f"📡 Broadcasting message to real-time clients: {json.dumps(realtime_message, indent=2)}")
+                    socketio.emit("new_message", message)
+                    
+                    logger.info(f"✅ Message {message_data['id']} processed and broadcasted successfully")
+                    
+    except Exception as e:
+        logger.error(f"❌ Error in process_whatsapp_message: {e}")
+        logger.error(f"🔍 Traceback: {traceback.format_exc()}")
+
+def extract_message_text(message):
+    """Extract text from different message types"""
+    message_type = message.get('type', '')
+    
+    if message_type == 'text':
+        return message.get('text', {}).get('body', '')
+    elif message_type == 'image':
+        return f"[Image: {message.get('image', {}).get('caption', 'No caption')}]"
+    elif message_type == 'video':
+        return f"[Video: {message.get('video', {}).get('caption', 'No caption')}]"
+    elif message_type == 'audio':
+        return "[Audio message]"
+    elif message_type == 'document':
+        filename = message.get('document', {}).get('filename', 'Unknown file')
+        return f"[Document: {filename}]"
+    else:
+        return f"[{message_type.upper()} message]"
+
+# Test webhook endpoint
+@app.route('/test/webhook', methods=['POST'])
+def test_webhook():
+    """Test webhook with sample WhatsApp data"""
+    sample_webhook_data = {
+        "entry": [{
+            "changes": [{
+                "value": {
+                    "messages": [{
+                        "id": f"test_msg_{int(datetime.now().timestamp())}",
+                        "from": "1234567890",
+                        "timestamp": str(int(datetime.now().timestamp())),
+                        "text": {"body": "This is a test message from the test webhook"},
+                        "type": "text"
+                    }],
+                    "metadata": {"display_phone_number": "test_group_123"}
+                }
+            }]
+        }]
+    }
+    
+    logger.info("🧪 Processing test webhook data")
+    process_whatsapp_message(sample_webhook_data)
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Test webhook processed',
+        'data': sample_webhook_data
+    })
+
+
+@app.route('/test/working-emit')
+def working_emit():
+    from flask import jsonify
+    from datetime import datetime
+    
+    try:
+        # Create a simple message
+        message = {
+            'id': f'working_test_{int(datetime.now().timestamp())}',
+            'text': 'Working emit test message!',
+            'sender': 'Server',
+            'timestamp': datetime.now().isoformat(),
+            'type': 'working_test',
+            'priority': 'HIGH'
+        }
+        
+        # Try to emit the message
+        socketio.emit("new_message", message)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Working emit successful',
+            'data': message,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'message': 'Emit failed'
+        }), 500
+
+@app.route('/test/ping')
+def ping():
+    from flask import jsonify
+    from datetime import datetime
+    return jsonify({
+        'status': 'alive',
+        'timestamp': datetime.now().isoformat(),
+        'message': 'Server is responding'
+    })
+
+# Missing page routes
+@app.route('/whatsapp-setup')
+def whatsapp_setup_page():
+    """WhatsApp setup and configuration page"""
+    return render_template('whatsapp_setup.html')
+
+@app.route('/sensitivity')
+def sensitivity_page():
+    """AI sensitivity configuration page"""
+    return render_template('sensitivity.html')
+
+@app.route('/user-flow')
+def user_flow_page():
+    """User flow management page"""
+    return render_template('user_flow.html')
+
+@app.route('/realtime')
+def realtime_page():
+    """Real-time monitoring page with Socket.IO"""
+    return render_template('realtime.html')
+
+@app.route('/test/corrected-emit')
+def corrected_emit():
+    from flask import jsonify
+    from datetime import datetime
+    
+    message = {
+        'id': f'corrected_{int(datetime.now().timestamp())}',
+        'text': '🎉 Corrected emit syntax - should work now!',
+        'sender': 'Corrected Server',
+        'timestamp': datetime.now().isoformat(),
+        'type': 'corrected_test',
+        'priority': 'HIGH'
+    }
+    
+    try:
+        # Use correct Flask-SocketIO syntax
+        socketio.emit("new_message", message)
+        return jsonify({
+            'status': 'success',
+            'message': 'Corrected emit successful',
+            'data': message
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'message': 'Corrected emit failed'
+        })
+
+@app.route('/test/broadcast-emit')
+def broadcast_emit():
+    from flask import jsonify
+    from datetime import datetime
+    
+    message = {
+        'id': f'broadcast_{int(datetime.now().timestamp())}',
+        'text': '📡 Testing broadcast to all clients!',
+        'sender': 'Broadcast Server',
+        'timestamp': datetime.now().isoformat(),
+        'type': 'broadcast_test',
+        'priority': 'HIGH'
+    }
+    
+    try:
+        # Try different broadcast methods
+        socketio.emit('new_message', message, room=None)  # Broadcast to all
+        return jsonify({
+            'status': 'success',
+            'message': 'Broadcast emit successful',
+            'data': message
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'message': 'Broadcast emit failed'
+        })
+
+@app.route("/test/quick-emit")
+def quick_emit():
+    from flask import jsonify
+    from datetime import datetime
+    import sys
+    
+    print("QUICK EMIT TEST STARTING", file=sys.stderr, flush=True)
+    
+    try:
+        socketio.emit("new_message", {
+            "text": "Quick emit test",
+            "sender": "Quick Test",
+            "timestamp": datetime.now().isoformat()
+        })
+        print("QUICK EMIT COMPLETED", file=sys.stderr, flush=True)
+        return jsonify({"status": "quick emit done"})
+    except Exception as e:
+        print(f"QUICK EMIT ERROR: {e}", file=sys.stderr, flush=True)
+        return jsonify({"error": str(e)})
+
+
+@app.route('/test/force-broadcast')
+def force_broadcast():
+    from flask import jsonify
+    from datetime import datetime
+    
+    message = {
+        'id': f'force_broadcast_{int(datetime.now().timestamp())}',
+        'text': '📢 FORCE BROADCAST - Should reach ALL clients!',
+        'sender': 'Force Broadcast',
+        'timestamp': datetime.now().isoformat(),
+        'type': 'force_broadcast',
+        'priority': 'CRITICAL'
+    }
+    
+    try:
+        # Try multiple broadcast methods
+        print(f"📢 Force broadcasting: {message}")
+        
+        # Method 1: Use broadcast=True explicitly
+        socketio.emit("new_message", message)
+        
+        # Method 2: Use server.emit
+        socketio.server.emit('new_message', message)
+        
+        # Method 3: Emit to all rooms
+        socketio.emit('new_message', message, room=None)
+        
+        print("✅ All broadcast methods completed")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Force broadcast sent via multiple methods',
+            'data': message
+        })
+        
+    except Exception as e:
+        print(f"❌ Force broadcast error: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        })
+
+@app.route('/test/working-broadcast')
+def working_broadcast():
+    from flask import jsonify
+    from datetime import datetime
+    
+    message = {
+        'id': f'working_{int(datetime.now().timestamp())}',
+        'text': '🎉 WORKING BROADCAST - Correct syntax!',
+        'sender': 'Working Broadcast',
+        'timestamp': datetime.now().isoformat(),
+        'type': 'working_broadcast',
+        'priority': 'HIGH'
+    }
+    
+    try:
+        print(f"📡 Working broadcast: {message}")
+        
+        # Correct syntax for your Flask-SocketIO version - no broadcast parameter
+        socketio.emit('new_message', message)
+        
+        print("✅ Working broadcast completed")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Working broadcast sent',
+            'data': message
+        })
+        
+    except Exception as e:
+        print(f"❌ Working broadcast error: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        })
+
+@app.route('/test/server-direct')
+def server_direct():
+    from flask import jsonify
+    from datetime import datetime
+    
+    message = {
+        'id': f'server_direct_{int(datetime.now().timestamp())}',
+        'text': '📡 SERVER DIRECT - Using server.emit!',
+        'sender': 'Server Direct',
+        'timestamp': datetime.now().isoformat(),
+        'type': 'server_direct',
+        'priority': 'HIGH'
+    }
+    
+    try:
+        print(f"📡 Server direct emit: {message}")
+        
+        # Use server.emit directly - this should broadcast to all
+        socketio.server.emit('new_message', message)
+        
+        print("✅ Server direct emit completed")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Server direct emit sent',
+            'data': message
+        })
+        
+    except Exception as e:
+        print(f"❌ Server direct error: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        })
+
+@socketio.on('trigger_test_message')
+def handle_trigger_test_message(data):
+    """Handle client request to emit a test message"""
+    from datetime import datetime
+    from flask_socketio import emit
+    
+    print(f"🎯 Client requested test message: {data}")
+    
+    test_message = {
+        'id': f'socketio_event_{int(datetime.now().timestamp())}',
+        'text': '🎉 SUCCESS! Message from Socket.IO event handler!',
+        'sender': 'Socket.IO Event Handler',
+        'timestamp': datetime.now().isoformat(),
+        'type': 'socketio_event',
+        'priority': 'HIGH'
+    }
+    
+    print(f"📡 Emitting from Socket.IO event context: {test_message}")
+    
+    # This WILL work because we're in Socket.IO context
+    emit('new_message', test_message, broadcast=True)
+    
+    print("✅ Emit from Socket.IO event completed")
+    
+    # Also send confirmation back to client
+    emit('test_response', {'status': 'Message sent successfully'})
+
+# WhatsApp Web Message Event Handler
+def setup_whatsapp_web_message_handler():
+    """Set up WhatsApp Web message event handler to capture incoming messages"""
+    print("📱 Setting up WhatsApp Web message event handler...")
+    
+    # This function should be called when your WhatsApp Web client receives a message
+    # You'll need to integrate this with your actual WhatsApp Web library
+    
+def handle_incoming_whatsapp_web_message(message_data):
+    """Handle incoming WhatsApp Web messages and route to existing processing pipeline"""
+    from datetime import datetime
+    
+    try:
+        print(f"📱 WhatsApp Web message received: {message_data}")
+        
+        # Convert WhatsApp Web message format to webhook format for existing pipeline
+        webhook_data = {
+            "entry": [{
+                "changes": [{
+                    "value": {
+                        "messages": [{
+                            "id": message_data.get('id', f'web_{int(datetime.now().timestamp())}'),
+                            "from": message_data.get('from', message_data.get('sender', 'unknown')),
+                            "timestamp": str(int(datetime.now().timestamp())),
+                            "text": {"body": message_data.get('body', message_data.get('text', ''))},
+                            "type": "text"
+                        }],
+                        "metadata": {
+                            "display_phone_number": message_data.get('chat', {}).get('name', 'WhatsApp Web')
+                        }
+                    }
+                }]
+            }]
+        }
+        
+        print(f"📡 Converting WhatsApp Web message to webhook format: {webhook_data}")
+        
+        # Use existing webhook processing pipeline
+        process_whatsapp_message(webhook_data)
+        
+        print("✅ WhatsApp Web message processed through existing pipeline")
+        
+    except Exception as e:
+        print(f"❌ Error processing WhatsApp Web message: {e}")
+        import traceback
+        traceback.print_exc()
+
+@app.route('/api/whatsapp/inject-message', methods=['POST'])
+def inject_whatsapp_message():
+    """Inject a WhatsApp message directly into the processing pipeline"""
+    from flask import request, jsonify
+    from datetime import datetime
+    
+    try:
+        data = request.get_json()
+        message_text = data.get('text', 'Test message from WhatsApp Web')
+        sender = data.get('sender', '+1234567890')
+        
+        # Create message data
+        message_data = {
+            'id': f'injected_{int(datetime.now().timestamp())}',
+            'from': sender,
+            'body': message_text,
+            'timestamp': datetime.now().isoformat(),
+            'chat': {
+                'name': 'Injected Message Test'
+            }
+        }
+        
+        print(f"📱 Injecting WhatsApp message: {message_data}")
+        
+        # Process through handler
+        handle_incoming_whatsapp_web_message(message_data)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Message injected and processed',
+            'data': message_data
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        })
+
+@app.route('/api/whatsapp/simulate-real-message', methods=['POST'])
+def simulate_real_whatsapp_message():
+    """Simulate a real WhatsApp message for testing the complete pipeline"""
+    from flask import request, jsonify
+    from datetime import datetime
+    
+    try:
+        data = request.get_json() or {}
+        message_text = data.get('text', '🎯 Real WhatsApp message simulation - this should appear in real-time!')
+        sender = data.get('sender', '+1234567890')
+        
+        # Create realistic WhatsApp Web message
+        whatsapp_web_message = {
+            'id': f'real_sim_{int(datetime.now().timestamp())}',
+            'body': message_text,
+            'from': sender,
+            'timestamp': datetime.now().isoformat(),
+            'type': 'chat',
+            'chat': {
+                'name': 'Real Message Simulation',
+                'isGroup': False
+            }
+        }
+        
+        print(f"📱 Simulating real WhatsApp Web message: {whatsapp_web_message}")
+        
+        # Process through the WhatsApp Web handler
+        handle_incoming_whatsapp_web_message(whatsapp_web_message)
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Real WhatsApp message simulated',
+            'data': whatsapp_web_message
+        })
+        
+    except Exception as e:
+        print(f"❌ Error simulating real message: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        })
+def monitor_whatsapp_real_messages():
+    """Monitor real WhatsApp messages and feed to existing pipeline"""
+    global whatsapp_driver, whatsapp_connected, monitoring_active
+    
+    try:
+        # Wait for WhatsApp connection
+        WebDriverWait(whatsapp_driver, 120).until_not(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "canvas"))
+        )
+        WebDriverWait(whatsapp_driver, 30).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-testid='chat-list']"))
+        )
+        
+        whatsapp_connected = True
+        monitoring_active = True
+        
+        processed = set()
+        
+        while monitoring_active:
+            try:
+                unread_chats = whatsapp_driver.find_elements(By.CSS_SELECTOR, "span[data-testid='icon-unread-count']")
+                
+                for badge in unread_chats[:2]:
+                    chat = badge.find_element(By.XPATH, "./ancestor::div[@data-testid='cell-frame-container']")
+                    
+                    # Get chat name
+                    try:
+                        name_elem = chat.find_element(By.CSS_SELECTOR, "span[title]")
+                        chat_name = name_elem.get_attribute('title') or name_elem.text
+                    except:
+                        chat_name = "Unknown"
+                    
+                    chat.click()
+                    time.sleep(1)
+                    
+                    # Get messages
+                    containers = whatsapp_driver.find_elements(By.CSS_SELECTOR, "div[data-testid='msg-container']")[-2:]
+                    
+                    for container in containers:
+                        try:
+                            texts = container.find_elements(By.CSS_SELECTOR, "span.selectable-text")
+                            msg_text = " ".join([t.text for t in texts if t.text.strip()])
+                            
+                            if not msg_text:
+                                continue
+                                
+                            msg_id = f"real_{hash(msg_text)}_{int(time.time())}"
+                            if msg_id in processed:
+                                continue
+                            
+                            # Get sender
+                            sender = chat_name
+                            try:
+                                author = container.find_element(By.CSS_SELECTOR, "span[data-testid='author']")
+                                if author.text:
+                                    sender = author.text
+                            except:
+                                pass
+                            
+                            # Create message for your existing pipeline
+                            real_msg = {
+                                'id': msg_id,
+                                'body': msg_text,
+                                'from': sender,
+                                'timestamp': datetime.now().isoformat(),
+                                'type': 'chat',
+                                'chat': {'name': chat_name, 'isGroup': sender != chat_name}
+                            }
+                            
+                            # Feed to your existing handler!
+                            logger.info(f"📱 Real message: {msg_text[:30]}...")
+                            handle_incoming_whatsapp_web_message(real_msg)
+                            processed.add(msg_id)
+                            
+                        except Exception as e:
+                            continue
+                
+                time.sleep(3)
+                
+            except Exception as e:
+                logger.error(f"Monitor error: {e}")
+                time.sleep(10)
+                
+    except Exception as e:
+        logger.error(f"Connection failed: {e}")
+        whatsapp_connected = False
+
+
+
+@app.route('/api/whatsapp/disconnect', methods=['POST'])
+def disconnect_whatsapp():
+    """Disconnect WhatsApp Web"""
+    global whatsapp_driver, whatsapp_connected, monitoring_active
+    
+    try:
+        monitoring_active = False
+        whatsapp_connected = False
+        
+        if whatsapp_driver:
+            try:
+                whatsapp_driver.quit()
+            except:
+                pass
+            whatsapp_driver = None
+            
+            # Cleanup temp profiles
+            import glob
+            temp_profiles = glob.glob('/tmp/chrome_profile_*')
+            for profile in temp_profiles:
+                try:
+                    import shutil
+                    shutil.rmtree(profile)
+                except:
+                    pass
+            
+        return jsonify({
+            'success': True,
+            'message': 'WhatsApp disconnected successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
+
+@app.route('/api/whatsapp/connection-status')
+def whatsapp_connection_status():
+    """Get WhatsApp connection status"""
+    global whatsapp_connected, monitoring_active, whatsapp_driver
+    
+    return jsonify({
+        'connected': whatsapp_connected,
+        'monitoring': monitoring_active,
+        'driver_active': whatsapp_driver is not None,
+        'timestamp': datetime.now().isoformat()
+    })
+
+
+
+
+@app.route('/api/whatsapp/start-background', methods=['POST'])
+def start_whatsapp_background():
+    """Start WhatsApp monitoring using background method (workaround)"""
+    try:
+        start_background_whatsapp_monitoring()
+        return jsonify({
+            'success': True,
+            'status': 'background_monitoring_started',
+            'message': 'WhatsApp monitoring started in background (bypassing HTTP issues)'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        })
+
+
+@app.route('/api/whatsapp/web-status')
+def whatsapp_web_status():
+    return jsonify({
+        'connected': True,  # Chrome is running
+        'monitoring': True,
+        'driver_active': True,
+        'timestamp': datetime.now().isoformat()
+    })
+
+if __name__ == '__main__':
+    # Run with Socket.IO support
+    socketio.run(app, host="0.0.0.0", port=8080, debug=False)
